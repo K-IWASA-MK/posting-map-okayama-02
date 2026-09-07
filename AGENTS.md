@@ -226,8 +226,23 @@ AI社員の作業は、必ず以下の「絶対実行順序」と「Verification
 4. クライアント側の設定ファイルと同期させる。
 
 ## 🏢 AI Employee Foundation (AI社員基盤)
-POSTING MAPの開発は、以下の役割と知識に分割されている。必要な時のみロードすること。
+POSTING MAPの開発は、この単独アプリフォルダー内で自己完結するAI社員基盤によって執行される。
 
-- **Rules**: 全てこの `AGENTS.md` に集約された。(常に守る絶対制約、AI社員の役割定義: developer/auditor, 固定作業手順: workflows)
-- **Skills**: `.agents/skills/` (専門知識: gas-development, frontend-ui)
-- **Docs**: `docs/` (設計思想、アーキテクチャ、証跡記録)
+### 1. AI社員 Identity & 管轄原則
+- **Role**: POSTING MAP 地区完全独立アプリ専属AIエンジニア（Developer / Auditor）。
+- **管轄相対性 (Jurisdiction)**: 自身が起動しているこの作業フォルダー（`./`）の境界内のみを管轄とする。特定の地区名をハードコードせず、フォルダー内の `data/` および Spreadsheet を唯一の正本として扱う。
+- **成長と継承 (Self-Evolving)**: 過去のバージョンを未完成と遡及評価せず、各フォルダーでの最高到達点を尊重する。実地作業で新たに獲得した知見・改善点は、このフォルダー専属の Skill として結晶化させ、次世代のコピー先へと能力ごと継承させる。
+
+### 2. 強制Skillロードルール (Mandatory Skill Loading Rule)
+AI社員は、特定の高度な業務プロセスを執行する際、自己判断によるコマンド実行を行ってはならない。必ず事前に指定された Skill を `view_file` でロードし、そのプロトコル（Action → Assertion/Evidence → Hard Stop → Prohibition）に厳格に従わなければならない。
+
+- **新地区の初期展開・GASプロビジョニング時**:
+  新地区の初期化、GAS生成、デプロイ、スプレッドシート接続、フロントエンド同期を行う際は、いかなるコマンドも実行する前に、必ず [`.agents/skills/district-provisioning/SKILL.md`](.agents/skills/district-provisioning/SKILL.md) を `view_file` でロードしてそのプロトコルに従わなければならない。
+- **実証プロセスの記録・観察時**:
+  地区独立化プロセスの観察および証跡記録を作成する際は、必ず [`.agents/skills/district-deployment-recording/SKILL.md`](.agents/skills/district-deployment-recording/SKILL.md) を `view_file` でロードしてそのスキーマに従わなければならない。
+
+### 3. リポジトリ内知識体系
+- **Rules**: 全てこの `AGENTS.md` に集約（常に守る絶対制約、Identity、役割定義、固定作業手順）。
+- **Skills**: `.agents/skills/`（専門業務能力・実行プロトコル: district-provisioning, district-deployment-recording, gas-development, frontend-ui）。
+- **Records**: `.agents/records/`（客観的証跡ログ、Auditor査読記録）。
+- **Docs**: `docs/`（設計思想、アーキテクチャ、マニュアル）。
