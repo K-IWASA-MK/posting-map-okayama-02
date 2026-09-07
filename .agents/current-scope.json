@@ -103,5 +103,12 @@
   "docs/COPY_RUNBOOK.md",
   "scripts/check-provisioning-gate.mjs",
   "DEPLOYMENT_REGISTRY.md",
-  "deployment.json"
+  "deployment.json",
+  "data/boundaries.geojson",
+  "data/address_master.candidate.csv",
+  "data/municipality_master.candidate.csv",
+  "scripts/validate-address-master-rules.mjs",
+  "scripts/validate-district-data-gate.mjs",
+  ".agents/records/record-012-stage-1-district-data-establishment.md",
+  ".agents/records/record-013-post-stage-1-obsolescence-audit.md"
 ]
