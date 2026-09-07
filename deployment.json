@@ -1,10 +1,11 @@
 {
-  "districtId": "MIE-03",
+  "districtId": "OKAYAMA-02",
   "resources": {
-    "scriptId": "17VISNdxQLpxkR18XR4AMXRwDBSa600AJFIwrqDriQYxo8Tsot2DvXAzX",
-    "deploymentId": "AKfycbyjNwgZ_6CCv258lqKMrCXJYi0wDR23ZCyyzOQIV1R_WcCF5TQxYXOzZWWSJd_vMyu_",
-    "webAppUrl": "https://script.google.com/macros/s/AKfycbyjNwgZ_6CCv258lqKMrCXJYi0wDR23ZCyyzOQIV1R_WcCF5TQxYXOzZWWSJd_vMyu_/exec",
-    "spreadsheetId": "1xQUvlCaUO103rjSGmdcFQQFkukodG4Dg9mS_teWT7uA",
+    "scriptId": "1XAK1_6JxPtBUZaP6IsaFe3WWv2iz8SHl8bftnvYL9SnVELGfaW_z1Llo",
+    "deploymentId": "AKfycbziJy-eQ4g3sJ9BytSZO1XX1Ri7zclrf7ov6qG2HI0RAbn5L9nNisXUyA10Q6IE0OEI",
+    "webAppUrl": "https://script.google.com/macros/s/AKfycbziJy-eQ4g3sJ9BytSZO1XX1Ri7zclrf7ov6qG2HI0RAbn5L9nNisXUyA10Q6IE0OEI/exec",
+    "spreadsheetId": "1CkxZSVa55UP8FgIJFuXUwEBhTkTvjYyIlxPrZ5npjnQ",
+    "storageFolderId": "10JDgdQCFA0FRNZFTmMFEdKvO3Qb9HHdS",
     "productionLiffUrl": "https://liff.line.me/2010941735-GRLuqPic"
   }
 }
