@@ -102,5 +102,6 @@
   "scripts/safe-deploy.mjs",
   "docs/COPY_RUNBOOK.md",
   "scripts/check-provisioning-gate.mjs",
-  "DEPLOYMENT_REGISTRY.md"
+  "DEPLOYMENT_REGISTRY.md",
+  "deployment.json"
 ]
