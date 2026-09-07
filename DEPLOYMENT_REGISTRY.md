@@ -34,7 +34,15 @@ URL を変更してはならない。
 | District | Role | Spreadsheet ID | Spreadsheet Name | Status |
 |---|---|---|---|---|
 | MIE-03 | 複製元テンプレート | `1xQUvlCaUO103rjSGmdcFQQFkukodG4Dg9mS_teWT7uA` | `MIE-03` | 本番稼働中（無変更保護） |
-| OKAYAMA-02 | 新地区本番準備 | `1KyzfmSFKvdBMsHdasgkbOMqtfrrg8wykOh_X6OONr0c` | `OKAYAMA-02` | 本番ドライブ内配置完了（03_BRANCH/OKAYAMA-02） |
+| OKAYAMA-02 | 新地区本番準備 | `1CkxZSVa55UP8FgIJFuXUwEBhTkTvjYyIlxPrZ5npjnQ` | `OKAYAMA-02` | 本番ドライブ内配置完了（03_BRANCH/OKAYAMA-02） |
+
+---
+
+## Master Database Template Registry (SSOT)
+
+| Template Name | Role | Spreadsheet ID | Target Folder | Status |
+|---|---|---|---|---|
+| `POSTING_MAP_EMPTY_TEMPLATE` | 公式空データベースマスター（全原本0件・7シート構成） | `1_fvgpNsK2fmz6hYgraDUnvyn69JnphmbgnXcOvzLYeY` | `01_MASTER/Templates` (`1Zt-AC153J0ByAwP9TkaUjimsgGVwDImF`) | 公式マスター自動配備完了 |
 
 ---
 

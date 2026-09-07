@@ -102,9 +102,19 @@
           }
         }
 
-        const sysInfoResult = (typeof SystemInfoService !== 'undefined' && SystemInfoService.getInstance)
-          ? SystemInfoService.getInstance().syncSystemInfo(options)
-          : this.createOrSyncSystemInfo(ss, options);
+        let sysInfoResult = null;
+        if (options && options.skipSystemInfo === true) {
+          sysInfoResult = {
+            success: true,
+            sheetName: 'SYSTEM_INFO',
+            districtName: districtName,
+            skipped: true
+          };
+        } else {
+          sysInfoResult = (typeof SystemInfoService !== 'undefined' && SystemInfoService.getInstance)
+            ? SystemInfoService.getInstance().syncSystemInfo(options)
+            : this.createOrSyncSystemInfo(ss, options);
+        }
 
         this.createMasterSheets(ss, addresses);
 
@@ -125,11 +135,134 @@
         return {
           success: true,
           message: "All 12 district sheets provisioned successfully.",
-          districtName: sysInfoResult.districtName,
+          districtName: (sysInfoResult && sysInfoResult.districtName) || districtName,
           sheets: allSheets,
           totalSheetsCount: allSheets.length,
           count: Array.isArray(addresses) ? addresses.length : 0,
-          month: monthResult.month
+          month: monthResult.month,
+          skipSystemInfo: !!(options && options.skipSystemInfo === true)
+        };
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
+    /**
+     * 公式空データベーステンプレートの自動生成
+     * コピー元Spreadsheetから不要シート削除・データクリア・SYSTEM_INFO初期化を行い、
+     * 指定されたマスター保管フォルダへ POSTING_MAP_EMPTY_TEMPLATE を生成する
+     *
+     * @param {string} sourceSpreadsheetId - コピー元Spreadsheet ID（非ハードコード）
+     * @param {string} targetFolderId - 格納先フォルダID
+     * @param {Object} options - オプション（provisioningToken等）
+     * @return {Object} 結果オブジェクト { success: boolean, templateId: string, templateUrl: string, sheets: Array }
+     */
+    createEmptyTemplate(sourceSpreadsheetId, targetFolderId, options) {
+      if (!sourceSpreadsheetId) {
+        return { success: false, code: "INVALID_ARGUMENT", message: "sourceSpreadsheetId is required." };
+      }
+      if (!targetFolderId) {
+        return { success: false, code: "INVALID_ARGUMENT", message: "targetFolderId is required." };
+      }
+
+      const token = options && options.provisioningToken;
+      const tokenCheck = typeof verifyProvisioningToken === 'function'
+        ? verifyProvisioningToken(token)
+        : { success: false, code: "UNAUTHORIZED", message: "verifyProvisioningToken unavailable" };
+      if (!tokenCheck.success) {
+        return tokenCheck;
+      }
+
+      const lock = LockService.getScriptLock();
+      lock.waitLock(30000);
+
+      try {
+        const folder = DriveApp.getFolderById(targetFolderId);
+        const sourceFile = DriveApp.getFileById(sourceSpreadsheetId);
+        const templateName = "POSTING_MAP_EMPTY_TEMPLATE";
+
+        // 既存に同名ファイルがあればゴミ箱へ移動して更新
+        const existingFiles = folder.getFilesByName(templateName);
+        while (existingFiles.hasNext()) {
+          const oldFile = existingFiles.next();
+          oldFile.setTrashed(true);
+        }
+
+        // コピーを作成
+        const newFile = sourceFile.makeCopy(templateName, folder);
+        const newSS = SpreadsheetApp.openById(newFile.getId());
+
+        // 1. 不要シートの削除（保持対象7シート以外をすべて削除）
+        const keepSheetNames = [
+          "SYSTEM_INFO",
+          "端末管理",
+          ...Object.values(this.masterNames)
+        ];
+
+        const allCurrentSheets = newSS.getSheets();
+        allCurrentSheets.forEach(sheet => {
+          const sName = sheet.getName();
+          if (!keepSheetNames.includes(sName)) {
+            newSS.deleteSheet(sheet);
+          }
+        });
+
+        // 2. 原本5種のデータ行クリア（2行目以降が存在する場合は削除し、1行目ヘッダーのみ残存）
+        Object.values(this.masterNames).forEach(masterName => {
+          const sheet = newSS.getSheetByName(masterName);
+          if (sheet) {
+            const lr = sheet.getLastRow();
+            if (lr >= 2) {
+              sheet.deleteRows(2, lr - 1);
+            }
+          }
+        });
+
+        // 3. SYSTEM_INFO の初期化（実シート基準）
+        const sysSheet = newSS.getSheetByName("SYSTEM_INFO");
+        if (sysSheet) {
+          const lr = sysSheet.getLastRow();
+          if (lr >= 12) {
+            // 行2〜行9: 地区固有値（地区コード〜Endpoint URL）をクリア
+            sysSheet.getRange("B2:B9").clearContent();
+            // 行10: Dashboard契約数 ➔ 2（標準値）
+            sysSheet.getRange("B10").setValue(2);
+            // 行11: Dashboard端末 ➔ クリア
+            sysSheet.getRange("B11").clearContent();
+            // 行12: 状態 ➔ ACTIVE（標準値）
+            sysSheet.getRange("B12").setValue("ACTIVE");
+          }
+        }
+
+        // 4. 端末管理の初期化
+        const devSheet = newSS.getSheetByName("端末管理");
+        if (devSheet) {
+          const lr = devSheet.getLastRow();
+          const lc = devSheet.getLastColumn();
+          if (lr >= 2 && lc >= 2) {
+            // 2行目以降のB列以降（登録デバイス情報）をクリアし、A列の CONTRACT-01, CONTRACT-02 は保持
+            devSheet.getRange(2, 2, lr - 1, lc - 1).clearContent();
+          }
+        }
+
+        SpreadsheetApp.flush();
+
+        const finalSheets = newSS.getSheets().map(s => ({
+          name: s.getName(),
+          lastRow: s.getLastRow(),
+          lastColumn: s.getLastColumn(),
+          dataRows: Math.max(0, s.getLastRow() - 1)
+        }));
+
+        return {
+          success: true,
+          message: "POSTING_MAP_EMPTY_TEMPLATE created successfully.",
+          templateId: newFile.getId(),
+          templateUrl: newFile.getUrl(),
+          targetFolderId: targetFolderId,
+          sourceSpreadsheetId: sourceSpreadsheetId,
+          sheetsCount: finalSheets.length,
+          sheets: finalSheets
         };
       } finally {
         lock.releaseLock();
@@ -388,6 +521,30 @@
           }
 
           createdSheets.push(monthlyName);
+        } else {
+          // 既存の当月シートが存在する場合の同期（新地区プロビジョニング初期化対応）
+          const masterSheet = ss.getSheetByName(masterName);
+          if (masterSheet) {
+            if (type === 'distribution') {
+              const masterLr = masterSheet.getLastRow();
+              const currentLr = currentMonthly.getLastRow();
+              const currentLc = Math.max(currentMonthly.getLastColumn(), 15);
+              if (currentLr >= 2) {
+                currentMonthly.getRange(2, 1, currentLr - 1, currentLc).clearContent();
+              }
+              if (masterLr >= 2) {
+                const masterData = masterSheet.getRange(2, 1, masterLr - 1, 15).getValues();
+                const initialMonthlyData = masterData.map(r => [r[0], r[1], r[2], "", "", "", "", "", "", "", "", "", "", "", ""]);
+                currentMonthly.getRange(2, 1, initialMonthlyData.length, 15).setValues(initialMonthlyData);
+              }
+            } else {
+              const currentLr = currentMonthly.getLastRow();
+              const currentLc = currentMonthly.getLastColumn();
+              if (currentLr >= 2 && currentLc >= 1) {
+                currentMonthly.getRange(2, 1, currentLr - 1, currentLc).clearContent();
+              }
+            }
+          }
         }
       });
 
