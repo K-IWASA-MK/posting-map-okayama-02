@@ -1,0 +1,45 @@
+{
+  "rawSource": {
+    "provider": "国土交通省 国土数値情報ダウンロードサイト",
+    "datasetName": "大字・町丁目レベル位置参照情報 (2025年版)",
+    "version": "19.0b (令和7年)",
+    "rawFile": "33000-19.0b.zip",
+    "csvFile": "33_2025.csv",
+    "downloadUrl": "https://nlftp.mlit.go.jp/isj/dls/data/19.0b/33000-19.0b.zip",
+    "datum": "日本測地系2000 (JGD2000) / WGS84実質同等",
+    "totalRawLines": 2646
+  },
+  "extraction": {
+    "targetMunicipalities": [
+      {
+        "code": "33102",
+        "name": "岡山市中区",
+        "count": 130
+      },
+      {
+        "code": "33103",
+        "name": "岡山市東区",
+        "count": 138
+      },
+      {
+        "code": "33104",
+        "name": "岡山市南区",
+        "count": 109
+      },
+      {
+        "code": "33204",
+        "name": "玉野市",
+        "count": 89
+      },
+      {
+        "code": "33212",
+        "name": "瀬戸内市",
+        "count": 42
+      }
+    ],
+    "totalExtracted": 508,
+    "totalExcluded": 2138,
+    "duplicatesCount": 0,
+    "duplicates": []
+  }
+}
