@@ -242,7 +242,7 @@ async function main() {
   // 1. Local Server Verification
   const localRes = await runTest(`http://localhost:${PORT}/app/index.html`, 'LOCAL SERVER');
 
-  const prodRes = await runTest('https://postingmap.jp/', 'PRODUCTION ENDPOINT');
+  const prodRes = await runTest('https://okayama-02.postingmap.jp/', 'PRODUCTION ENDPOINT');
 
   server.close();
 
