@@ -6,24 +6,84 @@
  * Responsibility: SpreadsheetApp へのアクセス、シート読み書き、データリポジトリの抽象化とカプセル化
  */
 
-function getSS() {
-  if (typeof isWebAppCall !== 'undefined' && !isWebAppCall) {
-    try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      if (ss && ss.getId()) {
-        return ss;
-      }
-    } catch (e) {}
+/**
+ * SpreadsheetResolver - Centralized Spreadsheet Connection & Resolution SSOT
+ *
+ * 優先順位:
+ * 1. TARGET_SPREADSHEET_ID (Script Properties) - 新標準
+ * 2. SPREADSHEET_ID (Script Properties) - 後方互換
+ * 3. SpreadsheetApp.getActiveSpreadsheet() - 既存バウンド環境互換
+ */
+class SpreadsheetResolver {
+  constructor() {
+    this.cachedSpreadsheet = null;
   }
 
-  const props = PropertiesService.getScriptProperties();
-  let id = props.getProperty("SPREADSHEET_ID");
-  
-  if (!id) {
-    console.error('[getSS] SPREADSHEET_ID が未設定です。PropertiesServiceに設定してください。');
-    throw new Error('SPREADSHEET_ID is not configured. Please set it in Script Properties.');
+  static getInstance() {
+    if (!SpreadsheetResolver.instance) {
+      SpreadsheetResolver.instance = new SpreadsheetResolver();
+    }
+    return SpreadsheetResolver.instance;
   }
-  return SpreadsheetApp.openById(id);
+
+  getSpreadsheetId() {
+    try {
+      const props = PropertiesService.getScriptProperties();
+      return props.getProperty("TARGET_SPREADSHEET_ID") || props.getProperty("SPREADSHEET_ID") || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  getDistrictId() {
+    try {
+      const props = PropertiesService.getScriptProperties();
+      return props.getProperty("DISTRICT_ID") || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  getSpreadsheet() {
+    if (this.cachedSpreadsheet) {
+      return this.cachedSpreadsheet;
+    }
+
+    const ssId = this.getSpreadsheetId();
+    if (ssId) {
+      try {
+        this.cachedSpreadsheet = SpreadsheetApp.openById(ssId);
+        return this.cachedSpreadsheet;
+      } catch (err) {
+        console.error(`[SpreadsheetResolver] Failed to open spreadsheet by ID "${ssId}":`, err);
+        throw new Error(`[SpreadsheetResolver] Cannot open spreadsheet by ID (${ssId}): ${err.toString()}`);
+      }
+    }
+
+    // TARGET_SPREADSHEET_ID / SPREADSHEET_ID がない場合のみ、既存バウンド環境との後方互換
+    if (typeof SpreadsheetApp !== 'undefined' && typeof SpreadsheetApp.getActiveSpreadsheet === 'function') {
+      try {
+        const activeSs = SpreadsheetApp.getActiveSpreadsheet();
+        if (activeSs && activeSs.getId()) {
+          this.cachedSpreadsheet = activeSs;
+          return this.cachedSpreadsheet;
+        }
+      } catch (e) {}
+    }
+
+    console.error('[SpreadsheetResolver] Target spreadsheet cannot be resolved. TARGET_SPREADSHEET_ID / SPREADSHEET_ID is missing.');
+    throw new Error('[SpreadsheetResolver] Target spreadsheet cannot be resolved. Neither TARGET_SPREADSHEET_ID nor SPREADSHEET_ID is configured in Script Properties, and no active spreadsheet is available.');
+  }
+
+  clearCache() {
+    this.cachedSpreadsheet = null;
+  }
+}
+
+SpreadsheetResolver.instance = null;
+
+function getSS() {
+  return SpreadsheetResolver.getInstance().getSpreadsheet();
 }
 
 class SpreadsheetBatchReader {
@@ -33,8 +93,14 @@ class SpreadsheetBatchReader {
   }
   getSpreadsheet() {
     if (this.cachedSpreadsheet) return this.cachedSpreadsheet;
-    const ssId = this.configProvider ? this.configProvider.getSpreadsheetId() : PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
-    this.cachedSpreadsheet = SpreadsheetApp.openById(ssId);
+    if (this.configProvider && typeof this.configProvider.getSpreadsheetId === 'function') {
+      const ssId = this.configProvider.getSpreadsheetId();
+      if (ssId) {
+        this.cachedSpreadsheet = SpreadsheetApp.openById(ssId);
+        return this.cachedSpreadsheet;
+      }
+    }
+    this.cachedSpreadsheet = SpreadsheetResolver.getInstance().getSpreadsheet();
     return this.cachedSpreadsheet;
   }
   readAll(sheetName) {
@@ -61,8 +127,14 @@ class SpreadsheetBatchWriter {
   }
   getSpreadsheet() {
     if (this.cachedSpreadsheet) return this.cachedSpreadsheet;
-    const ssId = this.configProvider ? this.configProvider.getSpreadsheetId() : PropertiesService.getScriptProperties().getProperty("SPREADSHEET_ID");
-    this.cachedSpreadsheet = SpreadsheetApp.openById(ssId);
+    if (this.configProvider && typeof this.configProvider.getSpreadsheetId === 'function') {
+      const ssId = this.configProvider.getSpreadsheetId();
+      if (ssId) {
+        this.cachedSpreadsheet = SpreadsheetApp.openById(ssId);
+        return this.cachedSpreadsheet;
+      }
+    }
+    this.cachedSpreadsheet = SpreadsheetResolver.getInstance().getSpreadsheet();
     return this.cachedSpreadsheet;
   }
   appendRows(sheetName, rows) {

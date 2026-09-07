@@ -25,6 +25,16 @@ URL を変更してはならない。
 | MIE-03 | Production | `17VISNdxQLpxkR18XR4AMXRwDBSa600AJFIwrqDriQYxo8Tsot2DvXAzX` | `AKfycbyjNwgZ_6CCv258lqKMrCXJYi0wDR23ZCyyzOQIV1R_WcCF5TQxYXOzZWWSJd_vMyu_` | 固定 | 三重第3区 |
 | MIE-04 | Production | （未発行/MIE-03共有中） | （未発行） | 固定 | 三重第4区 |
 | MIE-05 | Production | （未発行） | （未発行） | 固定 | 三重第5区 |
+| OKAYAMA-02 | Preparing | （未発行/Phase 4-2予定） | （未発行） | （未発行） | 岡山第2区（Spreadsheet準備完了） |
+
+---
+
+## District Spreadsheet Registry
+
+| District | Role | Spreadsheet ID | Spreadsheet Name | Status |
+|---|---|---|---|---|
+| MIE-03 | 複製元テンプレート | `1xQUvlCaUO103rjSGmdcFQQFkukodG4Dg9mS_teWT7uA` | `MIE-03` | 本番稼働中（無変更保護） |
+| OKAYAMA-02 | 新地区本番準備 | `1KyzfmSFKvdBMsHdasgkbOMqtfrrg8wykOh_X6OONr0c` | `OKAYAMA-02` | 本番ドライブ内配置完了（03_BRANCH/OKAYAMA-02） |
 
 ---
 

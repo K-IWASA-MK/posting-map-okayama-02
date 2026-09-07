@@ -105,6 +105,12 @@ function doGet(e) {
       code: "FORBIDDEN",
       message: "resetDeviceManagement is disabled on Web App endpoint."
     })).setMimeType(ContentService.MimeType.JSON);
+  } else if (action === 'bootstrapEnvironment') {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      code: "METHOD_NOT_ALLOWED",
+      message: "bootstrapEnvironment requires POST request."
+    })).setMimeType(ContentService.MimeType.JSON);
   } else if (action === 'provisionDistrict') {
     return ContentService.createTextOutput(JSON.stringify({
       success: false,
@@ -281,6 +287,110 @@ function doPost(e) {
     const pairResult = DeviceManagementService.getInstance().pairMobile(postData || params || {});
     return ContentService.createTextOutput(JSON.stringify(pairResult))
       .setMimeType(ContentService.MimeType.JSON);
+  } else if (action === 'bootstrapEnvironment') {
+    const token = (postData && (postData.provisioningToken || (postData.options && postData.options.provisioningToken)))
+               || (params && (params.provisioningToken || (params.options && params.options.provisioningToken)));
+
+    const props = PropertiesService.getScriptProperties();
+    const storedHash = (props.getProperty('PROVISIONING_TOKEN_HASH') || '').trim().toLowerCase();
+    const existingTargetSsId = (props.getProperty('TARGET_SPREADSHEET_ID') || props.getProperty('SPREADSHEET_ID') || '').trim();
+
+    // 既に初期化済み（PROVISIONING_TOKEN_HASH または TARGET_SPREADSHEET_ID が存在）の場合は厳格なトークン認証が必須
+    if (storedHash || existingTargetSsId) {
+      const tokenCheck = verifyProvisioningToken(token);
+      if (!tokenCheck.success) {
+        return ContentService.createTextOutput(JSON.stringify(tokenCheck))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    } else {
+      // 初回ブートストラップ時の安全防壁:
+      // provisioningToken が必須（空文字・16文字未満の脆弱トークンを拒絶）
+      if (!token || typeof token !== 'string' || token.trim().length < 16) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          code: "UNAUTHORIZED",
+          message: "Provisioning token with at least 16 characters is required for initial bootstrap."
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    const districtId = String((postData && postData.districtId) || (params && params.districtId) || "").trim();
+    const targetSpreadsheetId = String(
+      (postData && (postData.targetSpreadsheetId || postData.spreadsheetId)) ||
+      (params && (params.targetSpreadsheetId || params.spreadsheetId)) || ""
+    ).trim();
+    const storageParentId = String(
+      (postData && (postData.storageParentId || postData.storageFolderId)) ||
+      (params && (params.storageParentId || params.storageFolderId)) || ""
+    ).trim();
+
+    if (!districtId || !targetSpreadsheetId || !storageParentId) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        code: "INVALID_ARGUMENT",
+        message: "districtId, targetSpreadsheetId, and storageParentId are required."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 実在リソース検証: 対象スプレッドシートのアクセス確認
+    let ss;
+    try {
+      ss = SpreadsheetApp.openById(targetSpreadsheetId);
+    } catch (e) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        code: "RESOURCE_NOT_FOUND",
+        message: "Target spreadsheet cannot be opened: " + e.toString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 地区名SSOT検証: スプレッドシート名が districtId と完全一致すること
+    const ssName = (ss.getName() || "").trim();
+    if (ssName !== districtId) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        code: "DISTRICT_MISMATCH",
+        message: `Spreadsheet name "${ssName}" does not match requested districtId "${districtId}".`
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 実在リソース検証: ストレージフォルダのアクセス確認
+    try {
+      DriveApp.getFolderById(storageParentId);
+    } catch (e) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        code: "RESOURCE_NOT_FOUND",
+        message: "Storage parent folder cannot be opened: " + e.toString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Script Properties 設定
+    const newProps = {
+      DISTRICT_ID: districtId,
+      TARGET_SPREADSHEET_ID: targetSpreadsheetId,
+      SPREADSHEET_ID: targetSpreadsheetId,
+      STORAGE_PARENT_ID: storageParentId,
+      PROVISIONING_TOKEN_HASH: computeSha256(token.trim()).toLowerCase()
+    };
+
+    props.setProperties(newProps);
+
+    // キャッシュクリア
+    if (typeof CacheService !== "undefined" && CacheService.getScriptCache()) {
+      CacheService.getScriptCache().remove("CONFIG_STORE");
+    }
+    if (typeof SpreadsheetResolver !== "undefined" && SpreadsheetResolver.getInstance) {
+      SpreadsheetResolver.getInstance().clearCache();
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: "Environment bootstrapped successfully.",
+      districtId: districtId,
+      targetSpreadsheetId: targetSpreadsheetId,
+      storageParentId: storageParentId
+    })).setMimeType(ContentService.MimeType.JSON);
   } else if (action === 'provisionDistrict') {
     const token = (postData && (postData.provisioningToken || (postData.options && postData.options.provisioningToken)))
                || (params && (params.provisioningToken || (params.options && params.options.provisioningToken)));

@@ -97,9 +97,32 @@ const CONFIG = {
     return path.split(".").reduce((obj, key) => obj?.[key], cfg);
   },
   
+  // 地区ID設定
+  get DISTRICT_ID() {
+    try {
+      return PropertiesService.getScriptProperties().getProperty('DISTRICT_ID') || '';
+    } catch (e) {
+      return '';
+    }
+  },
+
+  // スプレッドシートID設定（TARGET_SPREADSHEET_ID 優先、SPREADSHEET_ID 後方互換）
+  get TARGET_SPREADSHEET_ID() {
+    try {
+      const props = PropertiesService.getScriptProperties();
+      return props.getProperty('TARGET_SPREADSHEET_ID') || props.getProperty('SPREADSHEET_ID') || '';
+    } catch (e) {
+      return '';
+    }
+  },
+
   // ストレージ設定
   // ⚠️ STORAGE_PARENT_ID は PropertiesService で管理（スクリプトプロパティ: STORAGE_PARENT_ID）
   get STORAGE_PARENT_ID() {
-    return PropertiesService.getScriptProperties().getProperty('STORAGE_PARENT_ID') || '';
+    try {
+      return PropertiesService.getScriptProperties().getProperty('STORAGE_PARENT_ID') || '';
+    } catch (e) {
+      return '';
+    }
   }
 };
