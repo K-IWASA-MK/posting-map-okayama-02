@@ -94,8 +94,8 @@ if (fs.existsSync(rootIndexPath)) {
     console.log(`✅ PASS: index.html loads ./active/dashboard/config.js.`);
   }
 
-  if (indexContent.includes('2010941735-GRLuqPic')) {
-    console.error(`❌ Hardcoded LIFF ID in index.html: Found static 2010941735-GRLuqPic!`);
+  if (indexContent.includes(ssotLiffId)) {
+    console.error(`❌ Hardcoded LIFF ID in index.html: Found static ${ssotLiffId}!`);
     hasMismatch = true;
   } else {
     console.log(`✅ PASS: index.html has no hardcoded LIFF ID.`);

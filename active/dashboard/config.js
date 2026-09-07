@@ -10,7 +10,7 @@ window.PMS_CLIENT_CONFIG = {
     boundariesGeojsonFilename: "boundaries.geojson"
   },
   line: {
-    liffId: "2010941735-GRLuqPic"
+    liffId: "2010941735-8FCwjD6x"
   },
   features: {
     photoUpload: true,

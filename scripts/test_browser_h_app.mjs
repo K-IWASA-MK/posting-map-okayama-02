@@ -242,10 +242,14 @@ async function main() {
   // 1. Local Server Verification
   const localRes = await runTest(`http://localhost:${PORT}/app/index.html`, 'LOCAL SERVER');
 
-  // 2. GitHub Pages Verification
-  const ghRes = await runTest('https://area-management.github.io/posting-map-system/', 'GITHUB PAGES');
+  const prodRes = await runTest('https://postingmap.jp/', 'PRODUCTION ENDPOINT');
 
   server.close();
+
+  if (localRes.consoleErrors.length > 0) {
+    console.error('❌ Local test failed with console errors');
+    process.exit(1);
+  }
 }
 
 main();
