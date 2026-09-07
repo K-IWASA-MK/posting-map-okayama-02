@@ -92,6 +92,20 @@ async function main() {
     process.exit(1);
   }
 
+  let districtBaseUrl = process.env.DISTRICT_BASE_URL || '';
+  if (!districtBaseUrl) {
+    const cnamePath = path.join(rootDir, 'CNAME');
+    if (fs.existsSync(cnamePath)) {
+      const cnameVal = fs.readFileSync(cnamePath, 'utf8').trim();
+      if (cnameVal) {
+        districtBaseUrl = `https://${cnameVal}`;
+      }
+    }
+  }
+  if (!districtBaseUrl) {
+    throw new Error('❌ districtBaseUrl could not be determined. Set CNAME or DISTRICT_BASE_URL.');
+  }
+
   const payload = {
     action: 'provisionDistrict',
     provisioningToken: provisioningToken,
@@ -100,7 +114,8 @@ async function main() {
       provisioningToken: provisioningToken,
       productionLiffUrl: productionLiffUrl,
       liffId: liffId,
-      baseUrl: 'https://postingmap.jp'
+      districtBaseUrl: districtBaseUrl,
+      baseUrl: districtBaseUrl
     }
   };
 

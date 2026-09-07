@@ -100,10 +100,22 @@
 
         const device = this.getDeviceSnapshot(ss);
         const liff = this.getLiffConfig(opts, sheet);
-        const baseUrl = opts.baseUrl || 'https://postingmap.jp';
+        let baseUrl = String(opts.baseUrl || opts.districtBaseUrl || '').trim();
+        if (!baseUrl && sheet) {
+          const existingData = sheet.getDataRange().getValues();
+          for (let i = 0; i < existingData.length; i++) {
+            if (existingData[i][0] === 'HアプリURL' || existingData[i][0] === 'Endpoint URL') {
+              const existingVal = String(existingData[i][1] || '').trim();
+              if (existingVal) {
+                baseUrl = existingVal.replace(/\/+$/, '');
+                break;
+              }
+            }
+          }
+        }
         const districtName = ss.getName();
-        const dashboardUrl = `${baseUrl}/active/manager/`;
-        const hAppUrl = `${baseUrl}/`;
+        const dashboardUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/active/manager/` : '';
+        const hAppUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/` : '';
         const deviceSummary = (device.pcDeviceIds.length > 0 || device.mobileDeviceIds.length > 0)
           ? `${device.pcDeviceIds.join(', ')} / ${device.mobileDeviceIds.join(', ')}`
           : 'PC-01, PC-02 / MOBILE-01, MOBILE-02';

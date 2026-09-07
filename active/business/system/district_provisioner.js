@@ -369,9 +369,9 @@
         }
       }
 
-      const baseUrl = opts.baseUrl || "https://postingmap.jp";
-      const hAppUrl = `${baseUrl}/`;
-      const dashboardUrl = `${baseUrl}/active/manager/`;
+      const baseUrl = String(opts.baseUrl || opts.districtBaseUrl || "").trim();
+      const hAppUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/` : "";
+      const dashboardUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/active/manager/` : "";
 
       let liffUrl = opts.productionLiffUrl || "";
       let liffId = opts.liffId || "";

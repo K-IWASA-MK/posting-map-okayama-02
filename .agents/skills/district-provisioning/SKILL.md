@@ -127,6 +127,21 @@ description: 新地区の初期展開、GAS生成、デプロイ、スプレッ�
 
 ---
 
+### Phase 3.5: District Base URL & SYSTEM_INFO Protocol（地区固有URL動的注入）
+* **Action**:
+  - `CNAME`（または環境変数 `DISTRICT_BASE_URL`）から `districtBaseUrl` を動的解決。
+  - パイプライン: `CNAME` ➔ `provisioning runtime` ➔ `districtBaseUrl` ➔ `GAS API (syncSystemInfo)` ➔ `SYSTEM_INFO` シート。
+  - GAS側（`system_info_service.js`, `district_provisioner.js` 等）には固定フォールバック（`'https://postingmap.jp'`）を一切残さず、渡された `baseUrl` または既存シート値を厳密に使用。
+  - フロントエンドおよびマークアップ（`index.html` の OGP, `active/manager/index.html` の script/css 参照）は絶対URLではなく相対パスを徹底。
+  - GASリッチメニュー画像（`v2_ui.js`）等もハードコードを排除し、`SYSTEM_INFO` の `HアプリURL`（SSOT）から動的に組み立てる。
+* **Assertion / Evidence**:
+  - `action=getSystemInfo` の実行レスポンスにおいて、`HアプリURL`, `Dashboard URL`, `Endpoint URL` がすべて新地区の `https://<district-domain>/` に更新されていること。
+  - 親機・前世代ドメインの残存ヒットが全レイヤーで 0件 であること。
+* **Hard Stop**:
+  - `SYSTEM_INFO` に旧URLが残存している場合、またはコード内に固定URLフォールバックが存在する場合は即時停止。
+
+---
+
 ### Phase 4: Client Synchronization Protocol（フロントエンド自動結合）
 * **Action**:
   - `deployment.json` に新 Web App URL およびリソース情報を記録。

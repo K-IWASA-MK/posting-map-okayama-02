@@ -188,8 +188,26 @@ function createRichMenuForHApp() {
     return;
   }
   
-  // 3. リッチメニューに画像をアップロードする
-  const imageUrl = "https://k-iwasa-mk.github.io/posting-map/assets/richmenu_default.png";
+  let hAppUrl = "";
+  try {
+    const sysSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("SYSTEM_INFO");
+    if (sysSheet) {
+      const sysData = sysSheet.getDataRange().getValues();
+      for (let i = 0; i < sysData.length; i++) {
+        if (sysData[i][0] === "HアプリURL" || sysData[i][0] === "Endpoint URL") {
+          hAppUrl = String(sysData[i][1] || "").trim();
+          if (hAppUrl) break;
+        }
+      }
+    }
+  } catch (err) {
+    Logger.log("Failed to resolve hAppUrl: " + err);
+  }
+  if (!hAppUrl) {
+    ui.alert("エラー: SYSTEM_INFO に HアプリURL が設定されていません。");
+    return;
+  }
+  const imageUrl = hAppUrl.replace(/\/+$/, '') + "/assets/richmenu_default.png";
   try {
     const imageBlob = UrlFetchApp.fetch(imageUrl).getBlob();
     const uploadRes = UrlFetchApp.fetch("https://api-data.line.me/v2/bot/richmenu/" + richMenuId + "/content", {
