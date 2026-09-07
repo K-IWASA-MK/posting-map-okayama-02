@@ -476,6 +476,28 @@ function doPost(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
+  } else if (action === 'createDistrictDatabase') {
+    const token = (postData && (postData.provisioningToken || (postData.options && postData.options.provisioningToken)))
+               || (params && (params.provisioningToken || (params.options && params.options.provisioningToken)));
+    const tokenCheck = verifyProvisioningToken(token);
+    if (!tokenCheck.success) {
+      return ContentService.createTextOutput(JSON.stringify(tokenCheck))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    const templateSpreadsheetId = (postData && postData.templateSpreadsheetId) || (params && params.templateSpreadsheetId);
+    const targetDistrictName = (postData && postData.targetDistrictName) || (params && params.targetDistrictName);
+    const targetFolderId = (postData && postData.targetFolderId) || (params && params.targetFolderId);
+    const options = (postData && postData.options) || (params && params.options) || {};
+    options.provisioningToken = token;
+
+    let result;
+    if (typeof DistrictProvisioner !== 'undefined' && DistrictProvisioner.getInstance) {
+      result = DistrictProvisioner.getInstance().createDistrictDatabase(templateSpreadsheetId, targetDistrictName, targetFolderId, options);
+    } else {
+      result = { success: false, message: 'DistrictProvisioner not available' };
+    }
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
   } else if (action === 'syncSystemInfo') {
     const token = (postData && (postData.provisioningToken || (postData.options && postData.options.provisioningToken)))
                || (params && (params.provisioningToken || (params.options && params.options.provisioningToken)));

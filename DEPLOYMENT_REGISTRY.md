@@ -34,7 +34,7 @@ URL を変更してはならない。
 | District | Role | Spreadsheet ID | Spreadsheet Name | Status |
 |---|---|---|---|---|
 | MIE-03 | 複製元テンプレート | `1xQUvlCaUO103rjSGmdcFQQFkukodG4Dg9mS_teWT7uA` | `MIE-03` | 本番稼働中（無変更保護） |
-| OKAYAMA-02 | 新地区本番準備 | `1CkxZSVa55UP8FgIJFuXUwEBhTkTvjYyIlxPrZ5npjnQ` | `OKAYAMA-02` | 本番ドライブ内配置完了（03_BRANCH/OKAYAMA-02） |
+| OKAYAMA-02 | 新地区本番稼働 | `1-fg6TlrE68ThUjGmJa7ly5_B6HZ3b8mzGCejSKUOY5o` | `OKAYAMA-02` | 本番DB自動配備・508件プロビジョニング完了（03_BRANCH/OKAYAMA-02） |
 
 ---
 

@@ -269,6 +269,77 @@
       }
     }
 
+    /**
+     * 公式空テンプレートから新地区スプレッドシートDBを複製・生成
+     *
+     * @param {string} templateSpreadsheetId - 複製元EMPTY TEMPLATE ID
+     * @param {string} targetDistrictName - 新地区名（例: "OKAYAMA-02"）
+     * @param {string} targetFolderId - 格納先フォルダID (例: 03_BRANCH/OKAYAMA-02)
+     * @param {Object} options - オプション（provisioningToken等）
+     * @return {Object} 結果オブジェクト { success, spreadsheetId, spreadsheetUrl, districtName, sheetsCount, sheets }
+     */
+    createDistrictDatabase(templateSpreadsheetId, targetDistrictName, targetFolderId, options) {
+      if (!templateSpreadsheetId) {
+        return { success: false, code: "INVALID_ARGUMENT", message: "templateSpreadsheetId is required." };
+      }
+      if (!targetDistrictName) {
+        return { success: false, code: "INVALID_ARGUMENT", message: "targetDistrictName is required." };
+      }
+      if (!targetFolderId) {
+        return { success: false, code: "INVALID_ARGUMENT", message: "targetFolderId is required." };
+      }
+
+      const token = options && options.provisioningToken;
+      const tokenCheck = typeof verifyProvisioningToken === 'function'
+        ? verifyProvisioningToken(token)
+        : { success: false, code: "UNAUTHORIZED", message: "verifyProvisioningToken unavailable" };
+      if (!tokenCheck.success) {
+        return tokenCheck;
+      }
+
+      const lock = LockService.getScriptLock();
+      lock.waitLock(30000);
+
+      try {
+        const folder = DriveApp.getFolderById(targetFolderId);
+        const templateFile = DriveApp.getFileById(templateSpreadsheetId);
+
+        // 格納先フォルダ内の同名スプレッドシートがあればゴミ箱へ退避
+        const existingFiles = folder.getFilesByName(targetDistrictName);
+        while (existingFiles.hasNext()) {
+          const oldFile = existingFiles.next();
+          oldFile.setTrashed(true);
+        }
+
+        // EMPTY TEMPLATE から複製し新地区名を設定
+        const newFile = templateFile.makeCopy(targetDistrictName, folder);
+        const newSS = SpreadsheetApp.openById(newFile.getId());
+
+        SpreadsheetApp.flush();
+
+        const finalSheets = newSS.getSheets().map(s => ({
+          name: s.getName(),
+          lastRow: s.getLastRow(),
+          lastColumn: s.getLastColumn(),
+          dataRows: Math.max(0, s.getLastRow() - 1)
+        }));
+
+        return {
+          success: true,
+          message: `District database "${targetDistrictName}" created successfully from template.`,
+          spreadsheetId: newFile.getId(),
+          spreadsheetUrl: newFile.getUrl(),
+          districtName: targetDistrictName,
+          targetFolderId: targetFolderId,
+          templateSpreadsheetId: templateSpreadsheetId,
+          sheetsCount: finalSheets.length,
+          sheets: finalSheets
+        };
+      } finally {
+        lock.releaseLock();
+      }
+    }
+
     createOrSyncSystemInfo(ss, options) {
       if (typeof SystemInfoService !== 'undefined' && SystemInfoService.getInstance) {
         return SystemInfoService.getInstance().syncSystemInfo(options);
