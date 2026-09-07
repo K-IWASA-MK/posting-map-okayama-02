@@ -114,5 +114,7 @@
   "scripts/verify_happ_detail.mjs",
   ".agents/records/record-014-stage-2-happ-establishment.md",
   "CNAME",
-  ".agents/records/record-015-okayama-02-custom-domain-establishment.md"
+  ".agents/records/record-015-okayama-02-custom-domain-establishment.md",
+  ".agents/skills/district-provisioning/SKILL.md",
+  ".agents/records/record-016-okayama-02-remnant-dependency-elimination.md"
 ]
