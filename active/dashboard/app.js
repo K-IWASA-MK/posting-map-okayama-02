@@ -655,7 +655,7 @@ window.triggerUISyncRefresh = async function() {
     if (window.currentPointDetailRowId) {
       const p = allPoints.find(point => point.rowId === window.currentPointDetailRowId);
       const modalContent = $('detail-modal-content');
-      if (p && modalContent && typeof renderDetailModalContent === 'function') {
+      if (p && p.syncStatus !== 'submitting' && modalContent && typeof renderDetailModalContent === 'function') {
         modalContent.innerHTML = renderDetailModalContent(p);
       }
     }
