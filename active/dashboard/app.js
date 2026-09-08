@@ -795,70 +795,35 @@ function pressNum(key) {
 
 // モーダルの「この内容で提出する」ボタン押下時に呼ばれる
 async function submitMissionComplete(areaName, rowId) {
-  const submitBtn = $('submit-mission-btn');
-  const cancelBtn = $('cancel-mission-btn');
-
-  if (submitBtn && submitBtn.disabled) {
-    return;
-  }
-
   const p = (typeof allPoints !== 'undefined' && Array.isArray(allPoints) && allPoints.find(point => point.rowId === rowId)) ||
             (typeof window.allPoints !== 'undefined' && Array.isArray(window.allPoints) && window.allPoints.find(point => point.rowId === rowId));
   if (!p) return;
 
-  if (p.syncStatus === 'submitting') {
+  if (p.gpsStatus === 'pending' || p.photoStatus !== 'OK' || !p.photoBase64) {
     return;
   }
 
+  if (p.gpsStatus === 'OK') {
+    if (!Number.isFinite(Number(p.latitude)) || !Number.isFinite(Number(p.longitude))) {
+      return;
+    }
+  }
+
+  if (p.syncStatus === 'submitting') return;
+  p.syncStatus = 'submitting';
+
+  const submitBtn = $('submit-mission-btn');
+  const cancelBtn = $('cancel-mission-btn');
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.style.opacity = '0.75';
     submitBtn.style.cursor = 'not-allowed';
     submitBtn.innerHTML = '⏳ 提出処理中...';
   }
-
   if (cancelBtn) {
     cancelBtn.disabled = true;
     cancelBtn.style.opacity = '0.35';
     cancelBtn.style.cursor = 'not-allowed';
-  }
-
-  p.syncStatus = 'submitting';
-
-  await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
-
-  if (p.gpsStatus === 'pending' || p.photoStatus !== 'OK' || !p.photoBase64) {
-    p.syncStatus = 'pending';
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.style.opacity = '1';
-      submitBtn.style.cursor = 'pointer';
-      submitBtn.innerHTML = '🚀 この内容で提出する';
-    }
-    if (cancelBtn) {
-      cancelBtn.disabled = false;
-      cancelBtn.style.opacity = '1';
-      cancelBtn.style.cursor = 'pointer';
-    }
-    return;
-  }
-
-  if (p.gpsStatus === 'OK') {
-    if (!Number.isFinite(Number(p.latitude)) || !Number.isFinite(Number(p.longitude))) {
-      p.syncStatus = 'pending';
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-        submitBtn.style.cursor = 'pointer';
-        submitBtn.innerHTML = '🚀 この内容で提出する';
-      }
-      if (cancelBtn) {
-        cancelBtn.disabled = false;
-        cancelBtn.style.opacity = '1';
-        cancelBtn.style.cursor = 'pointer';
-      }
-      return;
-    }
   }
 
   try {
