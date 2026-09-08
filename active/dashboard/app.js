@@ -798,38 +798,13 @@ async function submitMissionComplete(areaName, rowId) {
   const t0 = performance.now();
   console.log(`[SUBMIT_TRACE] [${new Date().toISOString()}] [0] submitMissionComplete START: rowId=${rowId}`);
 
-  const p = (typeof allPoints !== 'undefined' && Array.isArray(allPoints) && allPoints.find(point => point.rowId === rowId)) ||
-            (typeof window.allPoints !== 'undefined' && Array.isArray(window.allPoints) && window.allPoints.find(point => point.rowId === rowId));
-  if (!p) {
-    console.warn(`[SUBMIT_TRACE] Point not found for rowId=${rowId}`);
-    return;
-  }
-
-  // 提出前の厳格なバリデーション
-  if (p.gpsStatus === 'pending' || p.photoStatus !== 'OK' || !p.photoBase64) {
-    console.warn(`[SUBMIT_TRACE] Validation failed: photo=${p.photoStatus}, hasPhotoBase64=${!!p.photoBase64}, gps=${p.gpsStatus}`);
-    return;
-  }
-
-  if (p.gpsStatus === 'OK') {
-    if (!Number.isFinite(Number(p.latitude)) || !Number.isFinite(Number(p.longitude))) {
-      console.warn(`[SUBMIT_TRACE] GPS coordinate validation failed: lat=${p.latitude}, lng=${p.longitude}`);
-      return;
-    }
-  }
-
-  // 二重送信の防止
-  if (p.syncStatus === 'submitting') {
-    console.warn(`[SUBMIT_TRACE] Duplicate submission blocked`);
-    return;
-  }
-  p.syncStatus = 'submitting';
-
-  // 1. 提出ボタンのDOM操作直前
-  console.log(`[SUBMIT_TRACE] [${(performance.now() - t0).toFixed(2)}ms] [T1] Before DOM update`);
   const submitBtn = $('submit-mission-btn');
   const cancelBtn = $('cancel-mission-btn');
   if (submitBtn) {
+    if (submitBtn.disabled) {
+      console.warn(`[SUBMIT_TRACE] Duplicate submission blocked by button disabled`);
+      return;
+    }
     submitBtn.disabled = true;
     submitBtn.style.opacity = '0.75';
     submitBtn.style.cursor = 'not-allowed';
@@ -841,8 +816,57 @@ async function submitMissionComplete(areaName, rowId) {
     cancelBtn.style.cursor = 'not-allowed';
   }
 
-  // 2. innerHTML = '⏳ 提出処理中...' 実行直後
-  console.log(`[SUBMIT_TRACE] [${(performance.now() - t0).toFixed(2)}ms] [T2] After DOM update (innerHTML applied)`);
+  await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  console.log(`[SUBMIT_TRACE] [${(performance.now() - t0).toFixed(2)}ms] [T1] Paint confirmed (innerHTML applied)`);
+
+  const p = (typeof allPoints !== 'undefined' && Array.isArray(allPoints) && allPoints.find(point => point.rowId === rowId)) ||
+            (typeof window.allPoints !== 'undefined' && Array.isArray(window.allPoints) && window.allPoints.find(point => point.rowId === rowId));
+  if (!p) {
+    console.warn(`[SUBMIT_TRACE] Point not found for rowId=${rowId}`);
+    return;
+  }
+
+  // 提出前の厳格なバリデーション
+  if (p.gpsStatus === 'pending' || p.photoStatus !== 'OK' || !p.photoBase64) {
+    console.warn(`[SUBMIT_TRACE] Validation failed: photo=${p.photoStatus}, hasPhotoBase64=${!!p.photoBase64}, gps=${p.gpsStatus}`);
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.style.cursor = 'pointer';
+      submitBtn.innerHTML = '🚀 この内容で提出する';
+    }
+    if (cancelBtn) {
+      cancelBtn.disabled = false;
+      cancelBtn.style.opacity = '1';
+      cancelBtn.style.cursor = 'pointer';
+    }
+    return;
+  }
+
+  if (p.gpsStatus === 'OK') {
+    if (!Number.isFinite(Number(p.latitude)) || !Number.isFinite(Number(p.longitude))) {
+      console.warn(`[SUBMIT_TRACE] GPS coordinate validation failed: lat=${p.latitude}, lng=${p.longitude}`);
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+        submitBtn.innerHTML = '🚀 この内容で提出する';
+      }
+      if (cancelBtn) {
+        cancelBtn.disabled = false;
+        cancelBtn.style.opacity = '1';
+        cancelBtn.style.cursor = 'pointer';
+      }
+      return;
+    }
+  }
+
+  // 二重送信の防止
+  if (p.syncStatus === 'submitting') {
+    console.warn(`[SUBMIT_TRACE] Duplicate submission blocked`);
+    return;
+  }
+  p.syncStatus = 'submitting';
 
   try {
     if (typeof enqueueSync === 'function') {
