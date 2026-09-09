@@ -32,21 +32,31 @@
                 : null;
               if (distSheet) {
                 const lastRow = distSheet.getLastRow();
-                if (lastRow > 0) {
-                  const values = distSheet.getRange(1, 1, lastRow, 4).getValues();
-                  const uniqueCompleted = new Set(
-                    values
-                      .filter(r => r[0] && r[3] !== "" && r[3] !== null)
-                      .map(r => parseInt(r[0], 10))
-                      .filter(id => !isNaN(id))
-                  );
-                  totalDone = uniqueCompleted.size;
+                if (lastRow > 1) {
+                  // A〜E列 (ID, 市町村, 町域, 配布完了日時, 配布枚数)
+                  const values = distSheet.getRange(2, 1, lastRow - 1, 4).getValues();
+                  for (let i = 0; i < values.length; i++) {
+                    const row = values[i];
+                    const id = row[0];
+                    const cityName = row[1] ? String(row[1]).trim() : "";
+                    
+                    // IDと市町村が存在する行を有効な配布対象としてカウント
+                    if (id !== "" && id !== null && cityName !== "") {
+                      totalPoints++;
+                      
+                      const completedAt = row[3];
+                      if (completedAt !== null && completedAt !== "") {
+                        totalDone++;
+                      }
+                    }
+                  }
                 }
               }
             }
           }
         } catch (e) {
           totalDone = 0;
+          totalPoints = 0;
         }
 
         const percent = totalPoints > 0 ? Math.round((totalDone / totalPoints) * 100) : 0;

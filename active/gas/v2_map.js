@@ -45,95 +45,58 @@ function refreshAreaSummaryCache() {
     };
   });
 
-  // 1. 実在するエリアシートが存在する場合、エリアシートから集計
-  const excludeSheets = [
-    "名簿", "原本", "保有チラシ枚数", "受渡要請履歴", "管理者ID",
-    "__SYSTEM_CACHE__", "📥 集計用マスターデータ", "郵便番号", "区割り",
-    "初めての方「使い方ガイド」", "📖 らくらくマニュアル", "らくらくマニュアル", "📄 活動報告書",
-    "__TEMP_ADDRESSES__", "TraceLog", "配布実績", "PinStatus"
-  ];
-  if (typeof CONFIG !== 'undefined' && CONFIG.get) {
-    [
-      "SHEET_GUIDE", "SHEET_ROSTER", "SHEET_TEMPLATE", "SHEET_POSTAL",
-      "SHEET_DISTRICT", "SHEET_MASTER_EXPORT", "SHEET_REPORT", "SHEET_MANUAL",
-      "SHEET_SYSTEM_CACHE", "SHEET_STORAGE", "SHEET_ADMIN", "SHEET_HANDOVER_HISTORY"
-    ].forEach(k => {
-      const v = CONFIG.get(k);
-      if (v && !excludeSheets.includes(v)) excludeSheets.push(v);
-    });
-  }
-
   let totalDone = 0;
   let totalPoints = 0;
 
-  if (ss) {
-    const sheets = ss.getSheets();
-    sheets.forEach(sheet => {
-      const sName = sheet.getName();
-      if (excludeSheets.includes(sName) || sheet.isSheetHidden()) return;
-      if (sName.includes("MASTER") || sName.includes("DATABASE") || sName.includes("EXPORT")) return;
+  // 1. 新アーキテクチャ: 月次単一データシートから実データを集計
+  let distSheet = null;
+  if (typeof MonthlySheetResolver !== 'undefined' && MonthlySheetResolver.getInstance) {
+    distSheet = MonthlySheetResolver.getInstance().getCurrentSheet("distribution");
+  }
 
-      const lastRow = sheet.getLastRow();
-      if (lastRow < 2) return;
+  if (distSheet) {
+    const lastRow = distSheet.getLastRow();
+    if (lastRow >= 2) {
+      // A〜E列 (ID, 市町村, 町域, 配布完了日時, 配布枚数)
+      const values = distSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+      
+      for (let i = 0; i < values.length; i++) {
+        const row = values[i];
+        const cityName = row[1] ? String(row[1]).trim() : "";
+        if (!cityName) continue;
 
-      // 自治体名解決（例: "四日市市", "四日市市(2)" -> "四日市市"）
-      let baseCity = sName.replace(/\(\d+\)$/, '').trim();
-      if (!cityMap[baseCity]) {
-        cityMap[baseCity] = { name: baseCity, total: 0, done: 0, lat: null, lng: null };
-      }
+        const completedAt = row[3];
+        const isDone = (completedAt !== null && completedAt !== "");
 
-      const count = lastRow - 1;
-      cityMap[baseCity].total += count;
-      totalPoints += count;
-
-      // D2:D11 の範囲から isDone を集計
-      const targetRange = sheet.getRange(2, 4, Math.min(count, 10), 1);
-      const isDoneValues = targetRange.getValues();
-      let sheetDone = 0;
-      isDoneValues.forEach(row => {
-        const val = row[0];
-        if (val === true || val === 'true' || (typeof val === 'string' && val.toLowerCase() === 'true')) {
-          sheetDone++;
+        if (!cityMap[cityName]) {
+          cityMap[cityName] = { name: cityName, total: 0, done: 0, lat: null, lng: null };
         }
-      });
-      cityMap[baseCity].done += sheetDone;
-      totalDone += sheetDone;
-    });
 
-    // エリアシート未展開時の配布実績シート集計
-    if (totalDone === 0) {
-      let distSheet = null;
-      if (typeof MonthlySheetResolver !== 'undefined' && MonthlySheetResolver.getInstance) {
-        distSheet = MonthlySheetResolver.getInstance().getCurrentSheet("distribution");
-      }
-      if (distSheet) {
-        const lr = distSheet.getLastRow();
-        if (lr > 0) {
-          const values = distSheet.getRange(1, 1, lr, 4).getValues();
-          const uniqueCompleted = new Set(
-            values
-              .filter(r => r[0] && r[3] !== "" && r[3] !== null)
-              .map(r => parseInt(r[0], 10))
-              .filter(id => !isNaN(id))
-          );
-          totalDone = uniqueCompleted.size;
+        cityMap[cityName].total += 1;
+        totalPoints += 1;
+
+        if (isDone) {
+          cityMap[cityName].done += 1;
+          totalDone += 1;
         }
       }
     }
   }
 
   // 2. summary 配列の構築
-  const summary = Object.keys(cityMap).map(cityName => {
-    const info = cityMap[cityName];
-    return {
-      version: 1,
-      name: cityName,
-      done: info.done,
-      total: info.total,
-      lat: info.lat,
-      lng: info.lng
-    };
-  });
+  const summary = Object.keys(cityMap)
+    .filter(cityName => cityMap[cityName].total > 0)
+    .map(cityName => {
+      const info = cityMap[cityName];
+      return {
+        version: 1,
+        name: cityName,
+        done: info.done,
+        total: info.total,
+        lat: info.lat,
+        lng: info.lng
+      };
+    });
 
   const result = {
     summary: summary,

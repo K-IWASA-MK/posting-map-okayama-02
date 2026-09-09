@@ -19,43 +19,32 @@
         const cityTotals = {};
         const cityDoneMap = {};
 
-        // 1. スプレッドシートから実在するエリアシートおよび配布実績の集計
-        if (typeof getSS === 'function') {
-          const ss = getSS();
-          if (ss) {
-            const excludeSheets = [
-              "名簿", "原本", "保有チラシ枚数", "受渡要請履歴", "管理者ID",
-              "__SYSTEM_CACHE__", "📥 集計用マスターデータ", "郵便番号", "区割り",
-              "初めての方「使い方ガイド」", "📖 らくらくマニュアル", "らくらくマニュアル", "📄 活動報告書",
-              "__TEMP_ADDRESSES__", "TraceLog", "配布実績", "PinStatus",
-              "端末管理", "契約管理"
-            ];
+        // 1. 新アーキテクチャ: 月次単一データシートから実データを集計
+        let distSheet = null;
+        if (typeof MonthlySheetResolver !== 'undefined' && MonthlySheetResolver.getInstance) {
+          distSheet = MonthlySheetResolver.getInstance().getCurrentSheet("distribution");
+        }
 
-            const sheets = ss.getSheets();
-            sheets.forEach(sheet => {
-              const sName = sheet.getName();
-              if (excludeSheets.includes(sName) || sheet.isSheetHidden()) return;
-              if (sName.includes("MASTER") || sName.includes("DATABASE") || sName.includes("EXPORT") || sName.includes("conflict") || sName.startsWith("契約管理") || sName.startsWith("端末管理")) return;
+        if (distSheet) {
+          const lastRow = distSheet.getLastRow();
+          if (lastRow >= 2) {
+            // A〜E列 (ID, 市町村, 町域, 配布完了日時, 配布枚数)
+            const values = distSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+            
+            for (let i = 0; i < values.length; i++) {
+              const row = values[i];
+              const cityName = row[1] ? String(row[1]).trim() : "";
+              if (!cityName) continue;
 
-              const lastRow = sheet.getLastRow();
-              if (lastRow < 2) return;
+              const completedAt = row[3];
+              // 新アーキテクチャでは 配布完了日時(インデックス3)の有無でdone判定
+              const isDone = (completedAt !== null && completedAt !== "");
 
-              const baseCity = sName.replace(/\(\d+\)$/, '').trim();
-              const count = lastRow - 1;
-              cityTotals[baseCity] = (cityTotals[baseCity] || 0) + count;
-
-              // D2:D11 の範囲から isDone を集計
-              const targetRange = sheet.getRange(2, 4, Math.min(count, 10), 1);
-              const isDoneValues = targetRange.getValues();
-              let sheetDone = 0;
-              isDoneValues.forEach(row => {
-                const val = row[0];
-                if (val === true || val === 'true' || (typeof val === 'string' && val.toLowerCase() === 'true')) {
-                  sheetDone++;
-                }
-              });
-              cityDoneMap[baseCity] = (cityDoneMap[baseCity] || 0) + sheetDone;
-            });
+              cityTotals[cityName] = (cityTotals[cityName] || 0) + 1;
+              if (isDone) {
+                cityDoneMap[cityName] = (cityDoneMap[cityName] || 0) + 1;
+              }
+            }
           }
         }
 
@@ -78,7 +67,7 @@
           name: cityName,
           total: cityTotals[cityName] || 0,
           done: cityDoneMap[cityName] || 0
-        }));
+        })).filter(city => city.total > 0); // 存在する自治体のみ返却
 
         return {
           success: true,

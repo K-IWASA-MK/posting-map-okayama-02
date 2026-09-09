@@ -43,39 +43,43 @@ if (typeof AreaRepository === 'undefined') {
 
     findAreaPoints(areaName) {
       if (!areaName) return { success: false, message: "Area name required" };
-      
-      let ss = null;
-      if (typeof getSS === 'function') {
-        ss = getSS();
+
+      let distSheet = null;
+      if (typeof MonthlySheetResolver !== 'undefined' && MonthlySheetResolver.getInstance) {
+        distSheet = MonthlySheetResolver.getInstance().getCurrentSheet("distribution");
       }
-      if (!ss) return { success: false, message: "Spreadsheet inaccessible" };
+      if (!distSheet) return { success: false, message: "Distribution sheet not found" };
 
-      const s = ss.getSheetByName(areaName);
-      if (!s) return { success: false, message: "Area not found" };
-
-      const lastRow = s.getLastRow();
+      const lastRow = distSheet.getLastRow();
       if (lastRow < 2) return { success: true, points: [] };
 
-      const values = s.getRange(2, 1, lastRow - 1, 10).getValues();
-      const points = values.map((r, i) => {
-        const isComplete = r[3] === true || r[3] === 'true';
-        const completedAtStr = (r[4] && typeof r[4].getMonth === 'function')
-          ? Utilities.formatDate(r[4], "JST", "MM/dd HH:mm")
-          : (r[4] ? String(r[4]).trim() : "");
+      // 新アーキテクチャ: A〜O列 (ID, 市町村, 町域, 配布完了日時, 配布枚数, 担当者ID, 担当者名, GPS, 写真, 緯度, 経度, GPS日時, 写真ファイルID, 写真URL, 写真日時)
+      const values = distSheet.getRange(2, 1, lastRow - 1, 15).getValues();
+      const points = [];
 
-        return {
-          rowId: i + 2,
-          address: r[0] || "",
-          memo: r[2] || "",
+      for (let i = 0; i < values.length; i++) {
+        const r = values[i];
+        const cityName = r[1] ? String(r[1]).trim() : "";
+        if (cityName !== areaName) continue;
+
+        const isComplete = (r[3] !== null && r[3] !== "");
+        const completedAtStr = (r[3] && typeof r[3].getMonth === 'function')
+          ? Utilities.formatDate(r[3], "JST", "MM/dd HH:mm")
+          : (r[3] ? String(r[3]).trim() : "");
+
+        points.push({
+          rowId: parseInt(r[0], 10) || (i + 2), // A列がID
+          address: r[2] || "",                  // C列が町域 (Tier2のaddress)
+          memo: "",                             // 新アーキテクチャでは通常メモ列なし
           isDone: isComplete,
           completedAt: completedAtStr,
-          count: parseFloat(r[5]) || 0,
-          staffName: r[6] || "",
-          staffId: r[7] || "",
-          gps: r[8] || "",
-          photoUrl: r[9] || ""
-        };
-      });
+          count: parseFloat(r[4]) || 0,         // E列が配布枚数
+          staffName: r[6] || "",                // G列が担当者名
+          staffId: r[5] || "",                  // F列が担当者ID
+          gps: r[7] || "",                      // H列がGPS
+          photoUrl: r[13] || ""                 // N列が写真URL
+        });
+      }
 
       return { success: true, points: points };
     }
