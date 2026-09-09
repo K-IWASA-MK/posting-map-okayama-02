@@ -142,6 +142,25 @@
         sheet.setFrozenRows(1);
         SpreadsheetApp.flush();
 
+        if (opts.lineChannelAccessToken && typeof opts.lineChannelAccessToken === 'string') {
+          try {
+            const props = PropertiesService.getScriptProperties();
+            if (props) {
+              props.setProperty('LINE_CHANNEL_ACCESS_TOKEN', opts.lineChannelAccessToken.trim());
+            }
+          } catch (e) {}
+        }
+        if (opts.lineChannelId && typeof opts.lineChannelId === 'string') {
+          try {
+            const props = PropertiesService.getScriptProperties();
+            if (props) {
+              props.setProperty('LINE_CHANNEL_ID', opts.lineChannelId.trim());
+            }
+          } catch (e) {}
+        }
+
+        const lineConfigured = !!this.getConfigProperty('LINE_CHANNEL_ACCESS_TOKEN');
+
         return {
           success: true,
           sheetName: 'SYSTEM_INFO',
@@ -150,6 +169,7 @@
           hAppUrl: hAppUrl,
           liffUrl: liff.url,
           liffId: liff.id,
+          lineConfigured: lineConfigured,
           contractedPlanCount: device.contractedPlanCount || 2,
           deviceSummary: deviceSummary,
           status: 'ACTIVE'
