@@ -6,7 +6,7 @@
  * 1. 責務は「原本5種生成」「CSVエリア展開」「当月5種生成（原本からの複製）」「月次トリガー管理」のみ。
  * 2. MonthlySheetResolverとは完全に責務分離する（Resolverは参照解決SSOT、Provisionerが生成SSOT）。
  * 3. 前月シートは一切削除せず、履歴として保持する。
- * 4. SYSTEM_INFO、端末管理は月次化対象外・固定保護。
+ * 4. SYSTEM_INFOは月次化対象外・固定保護。
  * 5. 地区名・自治体名・件数はコードにハードコードせず、CSVおよびSpreadsheetから動的に決定する。
  */
 (function(global) {
@@ -95,13 +95,6 @@
       lock.waitLock(30000);
 
       try {
-        if (typeof DeviceManagementService !== 'undefined' && DeviceManagementService.getInstance) {
-          const devService = DeviceManagementService.getInstance();
-          if (typeof devService.getOrCreateDeviceManagementSheet === 'function') {
-            devService.getOrCreateDeviceManagementSheet(ss);
-          }
-        }
-
         let sysInfoResult = null;
         if (options && options.skipSystemInfo === true) {
           sysInfoResult = {
@@ -127,14 +120,13 @@
 
         const allSheets = [
           "SYSTEM_INFO",
-          "端末管理",
           ...Object.values(this.masterNames),
           ...monthlySheets
         ];
 
         return {
           success: true,
-          message: "All 12 district sheets provisioned successfully.",
+          message: "All 11 district sheets provisioned successfully.",
           districtName: (sysInfoResult && sysInfoResult.districtName) || districtName,
           sheets: allSheets,
           totalSheetsCount: allSheets.length,
@@ -181,21 +173,17 @@
         const sourceFile = DriveApp.getFileById(sourceSpreadsheetId);
         const templateName = "POSTING_MAP_EMPTY_TEMPLATE";
 
-        // 既存に同名ファイルがあればゴミ箱へ移動して更新
         const existingFiles = folder.getFilesByName(templateName);
         while (existingFiles.hasNext()) {
           const oldFile = existingFiles.next();
           oldFile.setTrashed(true);
         }
 
-        // コピーを作成
         const newFile = sourceFile.makeCopy(templateName, folder);
         const newSS = SpreadsheetApp.openById(newFile.getId());
 
-        // 1. 不要シートの削除（保持対象7シート以外をすべて削除）
         const keepSheetNames = [
           "SYSTEM_INFO",
-          "端末管理",
           ...Object.values(this.masterNames)
         ];
 
@@ -218,30 +206,12 @@
           }
         });
 
-        // 3. SYSTEM_INFO の初期化（実シート基準）
         const sysSheet = newSS.getSheetByName("SYSTEM_INFO");
         if (sysSheet) {
           const lr = sysSheet.getLastRow();
-          if (lr >= 12) {
-            // 行2〜行9: 地区固有値（地区コード〜Endpoint URL）をクリア
-            sysSheet.getRange("B2:B9").clearContent();
-            // 行10: Dashboard契約数 ➔ 2（標準値）
-            sysSheet.getRange("B10").setValue(2);
-            // 行11: Dashboard端末 ➔ クリア
-            sysSheet.getRange("B11").clearContent();
-            // 行12: 状態 ➔ ACTIVE（標準値）
-            sysSheet.getRange("B12").setValue("ACTIVE");
-          }
-        }
-
-        // 4. 端末管理の初期化
-        const devSheet = newSS.getSheetByName("端末管理");
-        if (devSheet) {
-          const lr = devSheet.getLastRow();
-          const lc = devSheet.getLastColumn();
-          if (lr >= 2 && lc >= 2) {
-            // 2行目以降のB列以降（登録デバイス情報）をクリアし、A列の CONTRACT-01, CONTRACT-02 は保持
-            devSheet.getRange(2, 2, lr - 1, lc - 1).clearContent();
+          if (lr >= 2) {
+            sysSheet.getRange(2, 2, lr - 1, 1).clearContent();
+            sysSheet.getRange(lr, 2).setValue("ACTIVE");
           }
         }
 
@@ -353,22 +323,6 @@
 
       const districtName = ss.getName();
 
-      let contractedCount = 2;
-      let deviceSummary = "PC-01, PC-02 / MOBILE-01, MOBILE-02";
-      if (typeof DeviceManagementService !== 'undefined' && DeviceManagementService.getInstance) {
-        const devStatus = DeviceManagementService.getInstance().getDeviceStatus();
-        if (devStatus && devStatus.contractedPlanCount) {
-          contractedCount = devStatus.contractedPlanCount;
-        }
-        if (devStatus && Array.isArray(devStatus.rows) && devStatus.rows.length > 0) {
-          const pcs = devStatus.rows.map(r => r.pcDeviceId).filter(Boolean);
-          const mobs = devStatus.rows.map(r => r.mobileDeviceId).filter(Boolean);
-          if (pcs.length > 0 || mobs.length > 0) {
-            deviceSummary = `${pcs.join(', ')} / ${mobs.join(', ')}`;
-          }
-        }
-      }
-
       const baseUrl = String(opts.baseUrl || opts.districtBaseUrl || "").trim();
       const hAppUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/` : "";
       const dashboardUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/active/manager/` : "";
@@ -401,8 +355,6 @@
         ["LIFF ID", liffId],
         ["LIFF URL", liffUrl],
         ["Endpoint URL", hAppUrl],
-        ["Dashboard契約数", contractedCount],
-        ["Dashboard端末", deviceSummary],
         ["状態", "ACTIVE"]
       ];
 
@@ -421,8 +373,6 @@
         success: true,
         sheet: sheetName,
         districtName: districtName,
-        contractedCount: contractedCount,
-        deviceSummary: deviceSummary,
         rowCount: rows.length
       };
     }

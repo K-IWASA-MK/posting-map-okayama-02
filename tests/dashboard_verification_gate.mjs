@@ -177,7 +177,7 @@ async function runDashboardQualityGate() {
   console.log("===============================================================\n");
 
   const results = {
-    phase0: { name: "Phase 0: N契約エンジン検証 (1契約=PC+MOBILE / 上書き防止 / REVOKE分離)", pass: false, details: [] },
+    phase0: { name: "Phase 0: 端末管理撤廃スタブ検証 (exists=false / 直接認可 / No-op)", pass: false, details: [] },
     phase1: { name: "Phase 1: 実機Dashboard通常動作 (District-Agnostic)", pass: false, details: [] },
     phase2: { name: "Phase 2: 連続リロード安定性", pass: false, details: [] },
     phase3: { name: "Phase 3: Master ERROR 障害・部分劣化試験", pass: false, details: [] },
@@ -186,96 +186,35 @@ async function runDashboardQualityGate() {
     phase6: { name: "Phase 6: Hアプリ非干渉 & アーキテクチャ分離監査", pass: false, details: [] },
   };
 
-  console.log("▶ [PHASE 0] N契約端末管理・認可エンジン全項目検証中...");
+  console.log("▶ [PHASE 0] 端末管理撤廃スタブ検証中...");
   try {
-    const { engine, mockSheets, mockSpreadsheet } = setupGasDeviceAuthSandbox();
+    const { engine } = setupGasDeviceAuthSandbox();
     let p0AllPass = true;
     const addP0 = (testName, pass, detail) => {
       results.phase0.details.push(`${pass ? 'PASS' : 'FAIL'}: ${testName} (${detail})`);
       if (!pass) p0AllPass = false;
     };
 
-    engine.resetDeviceManagementSheet();
-    const sheet = engine.getOrCreateDeviceManagementSheet(mockSpreadsheet);
+    const regRes = engine.registerOrValidateDevice({ deviceKey: "ANY_KEY" });
+    addP0("0.1 registerOrValidateDevice 撤廃応答確認", regRes.success && regRes.authorized, `authorized=${regRes.authorized}`);
 
-    const PC_KEY_1 = "DEV_PC_01_TEST_KEY_AAAA";
-    const MOB_KEY_1 = "DEV_MOB_01_TEST_KEY_BBBB";
-    const PC_KEY_2 = "DEV_PC_02_TEST_KEY_CCCC";
-    const MOB_KEY_2 = "DEV_MOB_02_TEST_KEY_DDDD";
-    const PC_KEY_3 = "DEV_PC_03_TEST_KEY_EEEE";
-    const MOB_KEY_3 = "DEV_MOB_03_TEST_KEY_FFFF";
-    const PC_KEY_4 = "DEV_PC_04_TEST_KEY_GGGG";
+    const authRes = engine.authenticateDashboardRequest({ deviceKey: "ANY_KEY" });
+    addP0("0.2 authenticateDashboardRequest 撤廃応答確認", authRes.success && authRes.authorized, `authorized=${authRes.authorized}`);
 
-    const regPc1 = engine.registerOrValidateDevice({ deviceKey: PC_KEY_1 });
-    addP0("1.1 契約1 PC-01 自動登録", regPc1.success && regPc1.deviceId === "PC-01" && regPc1.contractId === "CONTRACT-01", `deviceId=${regPc1.deviceId}, contractId=${regPc1.contractId}`);
+    const pairTokenRes = engine.issueMobilePairingToken({});
+    addP0("0.3 issueMobilePairingToken 互換応答確認", pairTokenRes.success, `success=${pairTokenRes.success}`);
 
-    const pairToken1 = engine.issueMobilePairingToken({ deviceKey: PC_KEY_1, pairKey: "PAIR_01" });
-    addP0("1.2 契約1 QR発行 (PC-01所属特定)", pairToken1.success && pairToken1.contractId === "CONTRACT-01" && pairToken1.mobileDeviceId === "MOBILE-01", `contractId=${pairToken1.contractId}, targetMob=${pairToken1.mobileDeviceId}`);
+    const pairRes = engine.pairMobileDevice({});
+    addP0("0.4 pairMobileDevice 互換応答確認", pairRes.success, `success=${pairRes.success}`);
 
-    const pairRes1 = engine.pairMobileDevice({ pairKey: "PAIR_01", deviceKey: MOB_KEY_1 });
-    addP0("1.3 契約1 MOBILE-01 ペアリング登録", pairRes1.success && pairRes1.deviceId === "MOBILE-01" && pairRes1.contractId === "CONTRACT-01", `deviceId=${pairRes1.deviceId}`);
+    const status = engine.getDeviceStatus();
+    addP0("0.5 getDeviceStatus 撤廃応答確認", status.success && status.exists === false && Array.isArray(status.rows) && status.rows.length === 0, `exists=${status.exists}`);
 
-    const regPc2 = engine.registerOrValidateDevice({ deviceKey: PC_KEY_2 });
-    addP0("2.1 契約2 PC-02 自動登録", regPc2.success && regPc2.deviceId === "PC-02" && regPc2.contractId === "CONTRACT-02", `deviceId=${regPc2.deviceId}, contractId=${regPc2.contractId}`);
-
-    const pairToken2 = engine.issueMobilePairingToken({ deviceKey: PC_KEY_2, pairKey: "PAIR_02" });
-    addP0("2.2 契約2 QR発行 (PC-02所属特定)", pairToken2.success && pairToken2.contractId === "CONTRACT-02" && pairToken2.mobileDeviceId === "MOBILE-02", `contractId=${pairToken2.contractId}`);
-
-    const pairRes2 = engine.pairMobileDevice({ pairKey: "PAIR_02", deviceKey: MOB_KEY_2 });
-    addP0("2.3 契約2 MOBILE-02 ペアリング登録", pairRes2.success && pairRes2.deviceId === "MOBILE-02" && pairRes2.contractId === "CONTRACT-02", `deviceId=${pairRes2.deviceId}`);
-
-    const validateMob1 = engine.registerOrValidateDevice({ deviceKey: MOB_KEY_1 });
-    addP0("2.4 MOBILE-01 非上書き保持確認", validateMob1.authorized && validateMob1.deviceId === "MOBILE-01", `deviceId=${validateMob1.deviceId}`);
-
-    const regPc3Block = engine.registerOrValidateDevice({ deviceKey: PC_KEY_3 });
-    addP0("2.5 契約2 契約枠外(3台目PC)遮断", !regPc3Block.authorized && regPc3Block.code === "DEVICE_LIMIT_EXCEEDED", `code=${regPc3Block.code}`);
-
-    sheet.getRange(2, 10).setValue(3);
-    const regPc3 = engine.registerOrValidateDevice({ deviceKey: PC_KEY_3 });
-    addP0("3.1 契約3 PC-03 自動登録", regPc3.success && regPc3.deviceId === "PC-03" && regPc3.contractId === "CONTRACT-03", `deviceId=${regPc3.deviceId}, contractId=${regPc3.contractId}`);
-
-    const pairToken3 = engine.issueMobilePairingToken({ deviceKey: PC_KEY_3, pairKey: "PAIR_03" });
-    addP0("3.2 契約3 QR発行 (PC-03所属特定)", pairToken3.success && pairToken3.contractId === "CONTRACT-03" && pairToken3.mobileDeviceId === "MOBILE-03", `contractId=${pairToken3.contractId}`);
-
-    const pairRes3 = engine.pairMobileDevice({ pairKey: "PAIR_03", deviceKey: MOB_KEY_3 });
-    addP0("3.3 契約3 MOBILE-03 ペアリング登録", pairRes3.success && pairRes3.deviceId === "MOBILE-03" && pairRes3.contractId === "CONTRACT-03", `deviceId=${pairRes3.deviceId}`);
-
-    const valMob1After = engine.registerOrValidateDevice({ deviceKey: MOB_KEY_1 });
-    const valMob2After = engine.registerOrValidateDevice({ deviceKey: MOB_KEY_2 });
-    addP0("3.4 全契約MOBILE端末保持確認", valMob1After.authorized && valMob2After.authorized, `mob1=${valMob1After.authorized}, mob2=${valMob2After.authorized}`);
-
-    const regPc4Block = engine.registerOrValidateDevice({ deviceKey: PC_KEY_4 });
-    addP0("3.5 契約3 契約枠外(4台目PC)遮断", !regPc4Block.authorized && regPc4Block.code === "DEVICE_LIMIT_EXCEEDED", `code=${regPc4Block.code}`);
-
-    const numRows = sheet.getLastRow() - 1;
-    const allRows = sheet.getRange(2, 1, numRows, 10).getValues();
-    for (let i = 0; i < allRows.length; i++) {
-      if (allRows[i][0] === "CONTRACT-02") {
-        sheet.getRange(i + 2, 2).setValue("REVOKED");
-        break;
-      }
-    }
-    engine.syncPropertiesDeviceHashes(mockSpreadsheet, sheet);
-
-    const pc2Revoked = engine.registerOrValidateDevice({ deviceKey: PC_KEY_2 });
-    const mob2Revoked = engine.registerOrValidateDevice({ deviceKey: MOB_KEY_2 });
-    const pc1StillActive = engine.registerOrValidateDevice({ deviceKey: PC_KEY_1 });
-    const pc3StillActive = engine.registerOrValidateDevice({ deviceKey: PC_KEY_3 });
-
-    addP0("4.1 REVOKED契約(PC-02) 遮断確認", !pc2Revoked.authorized && pc2Revoked.code === "DEVICE_REVOKED", `code=${pc2Revoked.code}`);
-    addP0("4.2 REVOKED契約(MOBILE-02) 遮断確認", !mob2Revoked.authorized && mob2Revoked.code === "DEVICE_REVOKED", `code=${mob2Revoked.code}`);
-    addP0("4.3 他契約(CONTRACT-01, CONTRACT-03) 継続許可確認", pc1StillActive.authorized && pc3StillActive.authorized, `pc1=${pc1StillActive.authorized}, pc3=${pc3StillActive.authorized}`);
-
-    const apiAuthPass = engine.authenticateDashboardRequest({ deviceKey: PC_KEY_1 });
-    const apiAuthBlocked = engine.authenticateDashboardRequest({ deviceKey: PC_KEY_2 });
-    const apiAuthUnknown = engine.authenticateDashboardRequest({ deviceKey: "UNKNOWN_UNREGISTERED_KEY" });
-
-    addP0("5.1 業務API認可 (ACTIVE端末=PASS)", apiAuthPass.success && apiAuthPass.authorized, `authorized=${apiAuthPass.authorized}`);
-    addP0("5.2 業務API認可 (REVOKED端末=BLOCK)", !apiAuthBlocked.success, `success=${apiAuthBlocked.success}`);
-    addP0("5.3 業務API認可 (未登録端末=BLOCK)", !apiAuthUnknown.success, `success=${apiAuthUnknown.success}`);
+    const resetRes = engine.resetDeviceManagementSheet();
+    addP0("0.6 resetDeviceManagementSheet 互換応答確認", resetRes.success, `success=${resetRes.success}`);
 
     results.phase0.pass = p0AllPass;
-    console.log(`[Phase 0] N契約エンジン検証結果: ${p0AllPass ? '✅ ALL PASS' : '❌ FAIL'}`);
+    console.log(`[Phase 0] 端末管理撤廃スタブ検証結果: ${p0AllPass ? '✅ ALL PASS' : '❌ FAIL'}`);
   } catch (err) {
     console.error('[Phase 0 Error]', err);
     results.phase0.pass = false;
@@ -301,7 +240,17 @@ async function runDashboardQualityGate() {
     }
   }
 
-  console.log(`[Config SSOT Inspection] Target CSV: ${csvFilename || '(未定義)'}, Expected Pins: ${expectedCsvPinsCount}`);
+  const muniCsvPath = path.resolve(process.cwd(), 'data/municipality_master.csv');
+  let expectedCities = [];
+  if (fs.existsSync(muniCsvPath)) {
+    const lines = fs.readFileSync(muniCsvPath, 'utf8').trim().split('\n').filter(l => l.trim().length > 0);
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(',');
+      if (parts[0]) expectedCities.push(parts[0].trim());
+    }
+  }
+
+  console.log(`[Config SSOT Inspection] Target CSV: ${csvFilename || '(未定義)'}, Expected Pins: ${expectedCsvPinsCount}, Expected Cities: ${expectedCities.join(', ')}`);
 
   const browser = await chromium.launch({
     headless: true,
@@ -318,12 +267,7 @@ async function runDashboardQualityGate() {
             contentType: 'application/json; charset=utf-8',
             body: JSON.stringify({
               success: true,
-              authorized: true,
-              registered: true,
-              deviceId: "PC-01",
-              contractId: "CONTRACT-01",
-              branchName: "MIE-03",
-              contractedPlanCount: 1
+              authorized: true
             })
           });
           return;
@@ -334,36 +278,17 @@ async function runDashboardQualityGate() {
   }
 
   try {
-    console.log("\n▶ [SECURITY GATE] 未登録端末アクセス遮断・画面ロック試験 実行中...");
-    const pageLock = await browser.newPage();
-    await pageLock.route('**/exec*', async (route, request) => {
-      if (request.method() === 'POST') {
-        const postData = request.postData() || '';
-        if (postData.includes('registerOrValidateDevice') || request.url().includes('action=registerOrValidateDevice')) {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json; charset=utf-8',
-            body: JSON.stringify({
-              success: false,
-              authorized: false,
-              code: "DEVICE_LIMIT_EXCEEDED",
-              message: "端末契約上限に達しています。この端末は許可されていません。"
-            })
-          });
-          return;
-        }
-      }
-      await route.continue();
-    });
+    console.log("\n▶ [SECURITY GATE] 端末制限撤廃・直接アクセス正常性試験 実行中...");
+    const pageDirect = await browser.newPage();
     const DASHBOARD_URL = 'http://localhost:8080/manager/index.html';
-    await pageLock.goto(DASHBOARD_URL, { waitUntil: 'load' });
-    const isLockScreenActive = await pageLock.evaluate(() => {
+    await pageDirect.goto(DASHBOARD_URL, { waitUntil: 'load' });
+    const isDirectAccessOk = await pageDirect.evaluate(() => {
       const lockEl = document.getElementById('device-lock-screen');
       const mainEl = document.querySelector('main');
-      return lockEl && !lockEl.classList.contains('hidden') && (!mainEl || mainEl.style.display === 'none');
+      return (!lockEl || lockEl.classList.contains('hidden')) && (mainEl && mainEl.style.display !== 'none');
     });
-    await pageLock.close();
-    console.log(`[SECURITY GATE] 未登録端末遮断・ロック画面表示: ${isLockScreenActive ? '✅ PASS (遮断成功)' : '❌ FAIL'}`);
+    await pageDirect.close();
+    console.log(`[SECURITY GATE] 端末制限撤廃・直接メイン表示確認: ${isDirectAccessOk ? '✅ PASS (ロックなし・正常表示)' : '❌ FAIL'}`);
     // -------------------------------------------------------------
     // PHASE 1: 実機Dashboard通常動作
     // -------------------------------------------------------------
@@ -544,10 +469,9 @@ async function runDashboardQualityGate() {
     const hasOriginalNoise = citiesCheck.stateCities.some(c => c.includes('原本') || c.includes('テンプレート'));
     const hasValidCities = citiesCheck.stateCities.length > 0;
 
-    const hasYokkaichi = citiesCheck.stateCities.includes('四日市市');
-    const hasKuwana = citiesCheck.stateCities.includes('桑名市');
-    const hasInabe = citiesCheck.stateCities.includes('いなべ市');
-    const hasNormalCities = hasYokkaichi && hasKuwana && hasInabe;
+    const allExpectedCitiesPresent = expectedCities.length > 0
+      ? expectedCities.every(c => citiesCheck.stateCities.includes(c))
+      : true;
 
     const hasDeviceMgmt = citiesCheck.stateCities.some(c => c.includes('端末管理'));
     const hasContractMgmt = citiesCheck.stateCities.some(c => c.includes('契約管理'));
@@ -557,7 +481,7 @@ async function runDashboardQualityGate() {
     const phase4Pass = (
       !hasOriginalNoise &&
       hasValidCities &&
-      hasNormalCities &&
+      allExpectedCitiesPresent &&
       noManagementNoise &&
       citiesCheck.renderedItems.includes('ALL') &&
       citiesCheck.initialClosed &&
@@ -569,7 +493,8 @@ async function runDashboardQualityGate() {
 
     results.phase4.pass = phase4Pass;
     results.phase4.details.push(`自治体数: ${citiesCheck.stateCities.length}`);
-    results.phase4.details.push(`正規自治体表示確認 (四日市市: ${hasYokkaichi ? 'PASS' : 'FAIL'}, 桑名市: ${hasKuwana ? 'PASS' : 'FAIL'}, いなべ市: ${hasInabe ? 'PASS' : 'FAIL'})`);
+    const cityCheckStr = expectedCities.map(c => `${c}: ${citiesCheck.stateCities.includes(c) ? 'PASS' : 'FAIL'}`).join(', ');
+    results.phase4.details.push(`正規自治体表示確認 (${cityCheckStr})`);
     results.phase4.details.push(`管理シート非混入確認 (端末管理: ${hasDeviceMgmt ? 'FAIL (混入)' : 'PASS (除外)'}, 契約管理: ${hasContractMgmt ? 'FAIL (混入)' : 'PASS (除外)'}, conflict: ${hasConflict ? 'FAIL (混入)' : 'PASS (除外)'})`);
     results.phase4.details.push(`ノイズ除外('原本'): ${hasOriginalNoise ? 'FAIL (混入)' : 'PASS (除外済)'}`);
     results.phase4.details.push(`選択時展開維持 (開いたまま連続切替): ${citiesCheck.firstCityWorksAndStaysOpen && citiesCheck.secondCityWorksAndStaysOpen ? 'PASS' : 'FAIL'}`);

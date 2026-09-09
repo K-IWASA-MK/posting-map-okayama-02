@@ -66,21 +66,6 @@
       return { url: liffUrl, id: liffId };
     }
 
-    getDeviceSnapshot(ss) {
-      if (typeof DeviceManagementService === 'undefined' || !DeviceManagementService.getInstance) {
-        return { contractedPlanCount: 2, activeContractCount: 0, pcDeviceIds: [], mobileDeviceIds: [] };
-      }
-      const result = DeviceManagementService.getInstance().getDeviceStatus();
-      const rows = Array.isArray(result.rows) ? result.rows : [];
-      const activeRows = rows.filter(row => String(row.status || '').toUpperCase() === 'ACTIVE');
-      return {
-        contractedPlanCount: Number(result.contractedPlanCount || 2),
-        activeContractCount: activeRows.length,
-        pcDeviceIds: activeRows.map(row => row.pcDeviceId).filter(Boolean),
-        mobileDeviceIds: activeRows.map(row => row.mobileDeviceId).filter(Boolean)
-      };
-    }
-
     syncSystemInfo(options) {
       const opts = options || {};
       const token = opts.provisioningToken;
@@ -98,7 +83,6 @@
         let sheet = ss.getSheetByName('SYSTEM_INFO');
         if (!sheet) sheet = ss.insertSheet('SYSTEM_INFO');
 
-        const device = this.getDeviceSnapshot(ss);
         const liff = this.getLiffConfig(opts, sheet);
         let baseUrl = String(opts.baseUrl || opts.districtBaseUrl || '').trim();
         if (!baseUrl && sheet) {
@@ -116,9 +100,6 @@
         const districtName = ss.getName();
         const dashboardUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/active/manager/` : '';
         const hAppUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/` : '';
-        const deviceSummary = (device.pcDeviceIds.length > 0 || device.mobileDeviceIds.length > 0)
-          ? `${device.pcDeviceIds.join(', ')} / ${device.mobileDeviceIds.join(', ')}`
-          : 'PC-01, PC-02 / MOBILE-01, MOBILE-02';
 
         const values = [
           ['項目', '内容'],
@@ -130,8 +111,6 @@
           ['LIFF ID', liff.id],
           ['LIFF URL', liff.url],
           ['Endpoint URL', hAppUrl],
-          ['Dashboard契約数', device.contractedPlanCount || 2],
-          ['Dashboard端末', deviceSummary],
           ['状態', 'ACTIVE']
         ];
 
@@ -170,8 +149,6 @@
           liffUrl: liff.url,
           liffId: liff.id,
           lineConfigured: lineConfigured,
-          contractedPlanCount: device.contractedPlanCount || 2,
-          deviceSummary: deviceSummary,
           status: 'ACTIVE'
         };
       } finally {
