@@ -799,34 +799,31 @@ async function submitMissionComplete(areaName, rowId) {
             (typeof window.allPoints !== 'undefined' && Array.isArray(window.allPoints) && window.allPoints.find(point => point.rowId === rowId));
   if (!p) return;
 
-  if (p.gpsStatus === 'pending' || p.photoStatus !== 'OK' || !p.photoBase64) {
-    return;
-  }
-
-  if (p.gpsStatus === 'OK') {
-    if (!Number.isFinite(Number(p.latitude)) || !Number.isFinite(Number(p.longitude))) {
-      return;
-    }
-  }
-
   if (p.syncStatus === 'submitting') return;
   p.syncStatus = 'submitting';
+
+  if (p.photoStatus !== 'OK' || !p.photoBase64) {
+    p.syncStatus = 'pending';
+    return;
+  }
 
   const submitBtn = $('submit-mission-btn');
   const cancelBtn = $('cancel-mission-btn');
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.style.opacity = '0.75';
-    submitBtn.style.cursor = 'not-allowed';
-    submitBtn.innerHTML = '⏳ 提出処理中...';
+    submitBtn.textContent = '⏳ 提出中...';
   }
   if (cancelBtn) {
     cancelBtn.disabled = true;
-    cancelBtn.style.opacity = '0.35';
-    cancelBtn.style.cursor = 'not-allowed';
   }
 
+  await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+
   try {
+    while (p.gpsStatus === 'pending') {
+      await new Promise(r => setTimeout(r, 200));
+    }
+
     if (typeof enqueueSync === 'function') {
       await enqueueSync({
         areaName,
@@ -837,7 +834,7 @@ async function submitMissionComplete(areaName, rowId) {
         longitude:  p.gpsStatus === 'OK' ? (p.longitude || '') : '',
         accuracy:   p.gpsStatus === 'OK' ? (p.accuracy || null) : null,
         gpsTimestamp: p.gpsStatus === 'OK' ? (p.gpsTimestamp || '') : '',
-        gpsStatusReason: p.gpsStatus || 'ERROR',
+        gpsStatusReason: p.gpsStatus || 'NO',
         branchCode: localStorage.getItem('branch_name') || '',
         areaId:     String(rowId),
         photoBase64: p.photoBase64 || '',
@@ -880,19 +877,17 @@ async function submitMissionComplete(areaName, rowId) {
     }
   } catch (err) {
     console.error("Submission failed:", err);
+    alert("提出に失敗しました: " + (err.message || "エラー"));
     p.syncStatus = 'pending';
-
-    // エラー時のみ元の表示と操作可能状態に復帰
+  } finally {
+    const submitBtn = $('submit-mission-btn');
+    const cancelBtn = $('cancel-mission-btn');
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.style.opacity = '1';
-      submitBtn.style.cursor = 'pointer';
-      submitBtn.innerHTML = '🚀 この内容で提出する';
+      submitBtn.textContent = '🚀 この内容で提出する';
     }
     if (cancelBtn) {
       cancelBtn.disabled = false;
-      cancelBtn.style.opacity = '1';
-      cancelBtn.style.cursor = 'pointer';
     }
   }
 }
