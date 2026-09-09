@@ -22,10 +22,7 @@ URL を変更してはならない。
 
 | Environment | Status | Script ID | Deployment ID | Web App URL | Notes |
 |-------------|--------|-----------|---------------|-------------|-------|
-| MIE-03 | Production | `17VISNdxQLpxkR18XR4AMXRwDBSa600AJFIwrqDriQYxo8Tsot2DvXAzX` | `AKfycbyjNwgZ_6CCv258lqKMrCXJYi0wDR23ZCyyzOQIV1R_WcCF5TQxYXOzZWWSJd_vMyu_` | 固定 | 三重第3区 |
-| MIE-04 | Production | （未発行/MIE-03共有中） | （未発行） | 固定 | 三重第4区 |
-| MIE-05 | Production | （未発行） | （未発行） | 固定 | 三重第5区 |
-| OKAYAMA-02 | Preparing | （未発行/Phase 4-2予定） | （未発行） | （未発行） | 岡山第2区（Spreadsheet準備完了） |
+| OKAYAMA-02 | Production | `1XAK1_6JxPtBUZaP6IsaFe3WWv2iz8SHl8bftnvYL9SnVELGfaW_z1Llo` | `AKfycbziJy-eQ4g3sJ9BytSZO1XX1Ri7zclrf7ov6qG2HI0RAbn5L9nNisXUyA10Q6IE0OEI` | 固定 | 岡山第2区 |
 
 ---
 
@@ -33,8 +30,7 @@ URL を変更してはならない。
 
 | District | Role | Spreadsheet ID | Spreadsheet Name | Status |
 |---|---|---|---|---|
-| MIE-03 | 複製元テンプレート | `1xQUvlCaUO103rjSGmdcFQQFkukodG4Dg9mS_teWT7uA` | `MIE-03` | 本番稼働中（無変更保護） |
-| OKAYAMA-02 | 新地区本番稼働 | `1-fg6TlrE68ThUjGmJa7ly5_B6HZ3b8mzGCejSKUOY5o` | `OKAYAMA-02` | 本番DB自動配備・508件プロビジョニング完了（03_BRANCH/OKAYAMA-02） |
+| OKAYAMA-02 | 新地区本番稼働 | `1-fg6TlrE68ThUjGmJa7ly5_B6HZ3b8mzGCejSKUOY5o` | `OKAYAMA-02` | 本番DB自動配備・508件プロビジョニング完了 |
 
 ---
 

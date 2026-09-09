@@ -116,10 +116,6 @@ function refreshAreaSummaryCache() {
   return result;
 }
 
-function createSystemCacheSheet() {
-  // Legacy __SYSTEM_CACHE__ sheet generation decommissioned in monthly architecture
-  return;
-}
 
 /**
  * 特定のエリアの進捗だけをキャッシュ内で更新する（高速）
