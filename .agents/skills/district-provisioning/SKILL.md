@@ -113,17 +113,22 @@ description: 新地区の初期展開、GAS生成、デプロイ、スプレッ�
 
 ---
 
-### Phase 3: Bootstrap & SSOT Binding Protocol（安全な自動注入）
+### Phase 3: Bootstrap & SSOT Binding Protocol（安全な自動注入・外部サービス自動構成）
 * **Action**:
   - `bootstrapEnvironment` API を POST リクエストで呼び出し、Script Properties へパラメータを一括注入。
   - 注入パラメータ: `DISTRICT_ID`, `TARGET_SPREADSHEET_ID`, `STORAGE_PARENT_ID`, `PROVISIONING_TOKEN_HASH`。
+  - 新地区構築時に必要な外部サービス連携（LINE Messaging API等）は、人間への手動設定依頼を完全排除し、プロビジョニングパイプライン（`provision-district.mjs` ➔ `SystemInfoService.syncSystemInfo`）を通じて自動構成する。
+  - プロビジョニング認証はプラットフォーム共通シークレット（`CORE_PROVISIONING_HASH`）によってゼロコンフィグで通過させ、人間に未知のトークン手入力を求めない。
 * **Assertion / Evidence**:
   - レスポンス `{"success": true, "message": "Environment bootstrapped successfully."}` の取得。
   - 実機API `GET /exec?action=getSystemSummary` を実行し、返却値 `districtName` が対象スプレッドシート名と動的一致することの客観的ログ。
+  - `syncSystemInfo` レスポンスにおいて `lineConfigured: true` が返却されること。
 * **Hard Stop**:
-  - `UNAUTHORIZED`（トークン不正）、`DISTRICT_MISMATCH`（地区不一致）、`RESOURCE_NOT_FOUND` 時は即時停止。
+  - `UNAUTHORIZED`（トークン不正）、`DISTRICT_MISMATCH`（地区不一致）、`RESOURCE_NOT_FOUND`、外部サービス未構成時は即時停止。
 * **Prohibition**:
   - 平文のプロビジョニングトークンをGASやGitに保存することは禁止（SHA-256ハッシュのみ保持）。
+  - 人間に手作業でトークン値の調査や手動設定を要求することの絶対禁止（ゼロ手作業原則）。
+  - GAS管理画面や外部コンソールを手動で開いて設定させる手順に依存することの絶対禁止。
 
 ---
 
