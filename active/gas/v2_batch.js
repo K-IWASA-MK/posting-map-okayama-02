@@ -179,17 +179,17 @@ function cleanupPinStatusDaily() {
     }
 
     const lr = pinSheet.getLastRow();
-    if (lr === 0) {
-      console.log("cleanupPinStatusDaily: PinStatus sheet is empty. Nothing to clear.");
+    if (lr <= 1) {
+      console.log("cleanupPinStatusDaily: PinStatus sheet has no data rows. Nothing to clear.");
       return;
     }
 
     const lock = LockService.getScriptLock();
     if (lock.tryLock(10000)) {
       try {
-        pinSheet.clearContents();
+        pinSheet.deleteRows(2, lr - 1);
         SpreadsheetApp.flush();
-        console.log(`cleanupPinStatusDaily: PinStatus cleared successfully (${lr} rows cleared).`);
+        console.log(`cleanupPinStatusDaily: PinStatus cleared successfully (${lr - 1} rows cleared, header preserved).`);
       } finally {
         lock.releaseLock();
       }

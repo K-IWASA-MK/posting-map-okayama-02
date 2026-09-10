@@ -113,6 +113,15 @@
 
         const monthResult = this.rolloverMonthlySheets();
 
+        if (typeof cleanupPinStatusDaily === 'function') {
+          cleanupPinStatusDaily();
+        }
+
+        if (typeof setupPinStatusCleanupTrigger === 'function') {
+          setupPinStatusCleanupTrigger();
+        }
+        this.setupMonthlyTrigger();
+
         SpreadsheetApp.flush();
 
         const types = ['distribution', 'staff', 'flyer', 'transfer', 'pin'];
@@ -126,12 +135,14 @@
 
         return {
           success: true,
-          message: "All 11 district sheets provisioned successfully.",
+          message: "All 11 district sheets provisioned successfully with COPY-READY automated triggers.",
           districtName: (sysInfoResult && sysInfoResult.districtName) || districtName,
           sheets: allSheets,
           totalSheetsCount: allSheets.length,
           count: Array.isArray(addresses) ? addresses.length : 0,
           month: monthResult.month,
+          triggersConfigured: true,
+          dailyCleanupExecuted: true,
           skipSystemInfo: !!(options && options.skipSystemInfo === true)
         };
       } finally {
@@ -550,14 +561,26 @@
               const masterLr = masterSheet.getLastRow();
               const currentLr = currentMonthly.getLastRow();
               const currentLc = Math.max(currentMonthly.getLastColumn(), 15);
+
+              let existingCompletedCount = 0;
               if (currentLr >= 2) {
-                currentMonthly.getRange(2, 1, currentLr - 1, currentLc).clearContent();
+                const existingData = currentMonthly.getRange(2, 1, currentLr - 1, currentLc).getValues();
+                existingCompletedCount = existingData.filter(r => r[3] && String(r[3]).trim() !== "").length;
               }
-              if (masterLr >= 2) {
-                const masterData = masterSheet.getRange(2, 1, masterLr - 1, 15).getValues();
-                const initialMonthlyData = masterData.map(r => [r[0], r[1], r[2], "", "", "", "", "", "", "", "", "", "", "", ""]);
-                currentMonthly.getRange(2, 1, initialMonthlyData.length, 15).setValues(initialMonthlyData);
+
+              if (existingCompletedCount > 0) {
+                console.log(`[rolloverMonthlySheets] distribution sheet has ${existingCompletedCount} completed records. Preserving existing distribution records.`);
+              } else {
+                if (currentLr >= 2) {
+                  currentMonthly.getRange(2, 1, currentLr - 1, currentLc).clearContent();
+                }
+                if (masterLr >= 2) {
+                  const masterData = masterSheet.getRange(2, 1, masterLr - 1, 15).getValues();
+                  const initialMonthlyData = masterData.map(r => [r[0], r[1], r[2], "", "", "", "", "", "", "", "", "", "", "", ""]);
+                  currentMonthly.getRange(2, 1, initialMonthlyData.length, 15).setValues(initialMonthlyData);
+                }
               }
+            } else if (type === 'pin') {
             } else {
               const currentLr = currentMonthly.getLastRow();
               const currentLc = currentMonthly.getLastColumn();

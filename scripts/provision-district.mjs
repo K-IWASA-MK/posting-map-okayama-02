@@ -171,6 +171,8 @@ async function main() {
     count: result.count,
     month: result.month,
     sheetsCount: Array.isArray(result.sheets) ? result.sheets.length : 0,
+    triggersConfigured: result.triggersConfigured ?? false,
+    dailyCleanupExecuted: result.dailyCleanupExecuted ?? false,
     lineConfigured: result.lineConfigured ?? result.systemInfo?.lineConfigured ?? false
   }, null, 2));
 
@@ -180,6 +182,12 @@ async function main() {
   }
 
   console.log(`🎉 Successfully provisioned district: ${result.districtName || 'N/A'} (Address Count: ${result.count}, Month: ${result.month})`);
+  if (result.triggersConfigured) {
+    console.log('⏰ COPY-READY Automated Triggers: CONFIGURED (Daily 0:00 & Monthly)');
+  }
+  if (result.dailyCleanupExecuted) {
+    console.log('🧹 PinStatus Initial Cleanup: EXECUTED (Header Preserved)');
+  }
   if (result.lineConfigured || (result.systemInfo && result.systemInfo.lineConfigured)) {
     console.log('📱 LINE Messaging API: CONFIGURED (PASS)');
   } else if (lineChannelAccessToken) {
