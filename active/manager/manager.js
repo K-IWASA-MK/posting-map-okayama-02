@@ -238,6 +238,7 @@ async function loadAddressMaster() {
       DashboardState.cities = masterCities;
       populateCitySelector(masterCities);
     }
+    bindBoundariesStatsToPins();
     renderPinsOnMap(DashboardState.map, DashboardState.markersLayer, pins);
 
     if (DashboardState.map && pins.length > 0) {
@@ -279,11 +280,44 @@ async function loadBoundariesGeoJson() {
 
     DashboardState.boundariesLayer = layer;
 
+    bindBoundariesStatsToPins();
     updateBoundariesVisibility();
 
     console.log('[Boundaries Layer Loaded] Pure geographic background layer initialized.');
   } catch (err) {
     console.warn('[Boundaries Load Error - Map continues normally]', err);
+  }
+}
+
+function bindBoundariesStatsToPins() {
+  if (!DashboardState.masterPins || DashboardState.masterPins.length === 0) return;
+  if (!DashboardState.boundariesGeoJson || !Array.isArray(DashboardState.boundariesGeoJson.features)) return;
+
+  const statsMap = new Map();
+  DashboardState.boundariesGeoJson.features.forEach(f => {
+    if (f.properties && f.properties.rowId !== undefined) {
+      statsMap.set(f.properties.rowId, {
+        population: f.properties.population,
+        households: f.properties.households
+      });
+    }
+  });
+
+  DashboardState.masterPins.forEach(pin => {
+    const stats = statsMap.get(pin.rowId);
+    if (stats) {
+      if (stats.population !== undefined) pin.population = stats.population;
+      if (stats.households !== undefined) pin.households = stats.households;
+    }
+  });
+
+  if (DashboardState.selectedPin) {
+    const selStats = statsMap.get(DashboardState.selectedPin.rowId);
+    if (selStats) {
+      if (selStats.population !== undefined) DashboardState.selectedPin.population = selStats.population;
+      if (selStats.households !== undefined) DashboardState.selectedPin.households = selStats.households;
+      renderRightBottomAreaStats(DashboardState.selectedPin);
+    }
   }
 }
 
@@ -837,7 +871,7 @@ function getMunicipalityTurnout(electionData, cityName) {
 
   const getCityValue = (election) => {
     if (!election) return null;
-    if (isAll) return Number(election.district3 !== undefined ? election.district3 : (election.districtTurnout || 0));
+    if (isAll) return Number(election.districtTurnout !== undefined ? election.districtTurnout : (election.district3 !== undefined ? election.district3 : 0));
     const munis = election.municipalities || {};
     if (munis[cityName] !== undefined) return Number(munis[cityName]);
     const cleanTarget = cityName.replace(/（一部）/g, '').replace(/市|町|村|郡/g, '').trim();
@@ -854,7 +888,7 @@ function getMunicipalityTurnout(electionData, cityName) {
       });
       if (found) return Number(found.turnout);
     }
-    return Number(election.district3 !== undefined ? election.district3 : (election.districtTurnout || 0));
+    return Number(election.districtTurnout !== undefined ? election.districtTurnout : (election.district3 !== undefined ? election.district3 : 0));
   };
 
   const currentVal = getCityValue(currentElection);
@@ -887,9 +921,9 @@ function getMunicipalityTurnout(electionData, cityName) {
   const natTurnout = currentElection.national !== undefined
     ? Number(currentElection.national).toFixed(2)
     : Number(currentElection.nationalTurnout || 0).toFixed(2);
-  const distTurnout = currentElection.district3 !== undefined
-    ? Number(currentElection.district3).toFixed(2)
-    : Number(currentElection.districtTurnout || 0).toFixed(2);
+  const distTurnout = currentElection.districtTurnout !== undefined
+    ? Number(currentElection.districtTurnout).toFixed(2)
+    : (currentElection.district3 !== undefined ? Number(currentElection.district3).toFixed(2) : Number(currentElection.districtTurnout || 0).toFixed(2));
 
   return {
     name: targetName,
@@ -955,7 +989,7 @@ function renderRightTopTurnout(selectedCity) {
 
         <div class="pt-2.5 mt-2.5 border-t border-borderNormal flex items-center justify-between text-xs text-textSub font-mono">
           <div>全国: <span class="text-white font-semibold">${data.nationalTurnout}%</span></div>
-          <div>3区全体: <span class="text-white font-semibold">${data.districtTurnout}%</span></div>
+          <div>全域: <span class="text-white font-semibold">${data.districtTurnout}%</span></div>
         </div>
       </div>
 
