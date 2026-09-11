@@ -79,23 +79,9 @@ function doGet(e) {
 
   const action = params.action || "";
 
-  const isReadOnlyAction = [
+  const isPublicBootstrapAction = [
     'getSystemSummary',
-    'getDashboardData',
-    'getTier1',
-    'getFlyerStock',
-    'getRanking',
-    'getLatestDistribution',
-    'getMapsApiKey',
-    'getDeliveryStats',
-    'getAreaDetails',
-    'getGlobalPinStatus',
-    'getSystemInfo'
-  ].includes(action);
-
-  const isDashboardAction = [
-    'getRoster',
-    'getTransferRequests'
+    'getMapsApiKey'
   ].includes(action);
 
   if (action === 'registerOrValidateDevice') {
@@ -142,13 +128,16 @@ function doGet(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-  } else {
+  } else if (!isPublicBootstrapAction) {
     const auth = authenticateRequest(params);
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))
         .setMimeType(ContentService.MimeType.JSON);
     }
     e.user = auth.user;
+  } else {
+    const auth = authenticateRequest(params);
+    e.user = auth.success ? auth.user : null;
   }
   const res = processGetActionLegacy(action, e);
   if (res && typeof res.setMimeType === 'function') {
@@ -272,23 +261,9 @@ function doPost(e) {
   }
   const action = (postData && postData.action) || params.action || (e && e.parameter && e.parameter.action) || "";
 
-  const isReadOnlyAction = [
+  const isPublicBootstrapAction = [
     'getSystemSummary',
-    'getDashboardData',
-    'getTier1',
-    'getFlyerStock',
-    'getRanking',
-    'getLatestDistribution',
-    'getMapsApiKey',
-    'getDeliveryStats',
-    'getAreaDetails',
-    'getGlobalPinStatus',
-    'getSystemInfo'
-  ].includes(action);
-
-  const isDashboardAction = [
-    'getRoster',
-    'getTransferRequests'
+    'getMapsApiKey'
   ].includes(action);
 
   if (action === 'registerOrValidateDevice') {
@@ -506,7 +481,7 @@ function doPost(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-  } else {
+  } else if (!isPublicBootstrapAction) {
     const auth = authenticateRequest(postData || {});
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))
@@ -516,6 +491,13 @@ function doPost(e) {
       postData.user = auth.user;
     } else {
       postData = { user: auth.user };
+    }
+  } else {
+    const auth = authenticateRequest(postData || {});
+    if (postData) {
+      postData.user = auth.success ? auth.user : null;
+    } else {
+      postData = { user: auth.success ? auth.user : null };
     }
   }
   const res = processPostAction(action, postData, e);
