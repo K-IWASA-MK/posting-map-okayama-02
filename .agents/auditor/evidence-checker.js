@@ -2,6 +2,8 @@
  * evidence-checker.js
  * 証跡の存在確認を行う（判定はしない）
  */
+const fs = require('fs');
+const path = require('path');
 
 function checkEvidence(evidence) {
   if (!evidence) return {
@@ -14,13 +16,15 @@ function checkEvidence(evidence) {
   // IMPLEMENTED証跡確認 (ファイルと差分)
   const hasImplementationEvidence = Array.isArray(evidence.files) && evidence.files.length > 0 && evidence.gitDiff === true;
 
-  // VERIFIED証跡確認 (コマンド、結果、日時のいずれか)
   let hasVerificationEvidence = false;
-  if (Array.isArray(evidence.commands) && evidence.commands.length > 0) {
-    const cmd = evidence.commands[0];
-    if (cmd.command && cmd.result && cmd.timestamp) {
-      hasVerificationEvidence = true;
-    }
+  if (Array.isArray(evidence.verificationFilePaths) && evidence.verificationFilePaths.length > 0) {
+    hasVerificationEvidence = evidence.verificationFilePaths.every(filePath => {
+      try {
+        return fs.existsSync(path.resolve(process.cwd(), filePath));
+      } catch (e) {
+        return false;
+      }
+    });
   }
 
   // DEPLOYED証跡確認 (push結果、deployment version ＋ Git Fact 4重確認)
@@ -56,8 +60,16 @@ function checkEvidence(evidence) {
     }
   }
 
-  // PRODUCTION VERIFIED証跡確認
-  const hasProductionEvidence = !!evidence.runtimeCheck && !!evidence.runtimeCheck.content && !!evidence.runtimeCheck.timestamp;
+  let hasProductionEvidence = false;
+  if (Array.isArray(evidence.productionFilePaths) && evidence.productionFilePaths.length > 0) {
+    hasProductionEvidence = evidence.productionFilePaths.every(filePath => {
+      try {
+        return fs.existsSync(path.resolve(process.cwd(), filePath));
+      } catch (e) {
+        return false;
+      }
+    });
+  }
 
   return {
     hasImplementationEvidence,

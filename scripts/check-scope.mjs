@@ -112,7 +112,7 @@ if (existsSync(auditorScript)) {
       }
       console.log('🟢 Governance Gate PASSED: Auditor allowCommit === true.');
     } else {
-      console.log('⚪ [Governance Gate] No report file found to audit. Scope check complete.');
+      exitFail('Governance Gate Error: No audit report file found. Execution cannot proceed without a valid audit report.');
     }
   } catch (e) {
     exitFail(`Governance Auditor execution failed: ${e.message}`);
