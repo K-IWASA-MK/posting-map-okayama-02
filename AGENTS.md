@@ -46,46 +46,6 @@ GAS側で取得できる Spreadsheet のファイル名（`SpreadsheetApp.getAct
 ## 🛑 No Implementation Without Explicit Plan Approval
 AIエージェントは、いかなるコード修正やGit操作を行う際も、事前に `implementation_plan.md` を作成し、ユーザーから明示的な承認（Proceed）を得るまで実行してはならない。
 
-## 📜 Core Rules
-### 1. Security & Authentication Rule
-- **Data Provisioning Security Rule**: 業務データ（CSV等）は、GitHub Pages等からクライアント側で直接Fetchしてはいけない。必ずGAS（v2_api）を経由し、認証を通過した状態で取得すること。
-- **API Authentication**: APIへのすべてのアクセス（doPost / doGet）は、Tokenまたは適切な認証を通過しなければならない。
-
-### 2. Legacy Cleanup Rule
-- **コメントアウト保存禁止**: 不要になったコードを `//` や `/*` で残置してはならない。Gitの履歴に残るため、コード上からは完全に削除すること。
-
-### 3. Deployment Synchronization Rule
-- **GAS Endpoint Resolution**: デプロイ環境のURLは、必ず `deployment.json` などのSSOTと完全に同期していなければならない。
-
-### 4. UI Layout Freeze Rule
-- **ID Card UI Freeze**: メインリストのUI等の寸法（width, flex）や配置比率は既存のCSSクラスを厳密に継承し、独自の再配分を行わない。
-
-### 5. Google Service Operation Rule (既存経路最優先・非侵襲原則)
-Google Drive / Google Sheets / Google Apps Script等のGoogleサービスを操作する場合、既存経路を最優先する。
-
-#### 優先順位
-1. 現在の認証・権限で可能か確認する
-2. ブラウザUIで直接操作できるか確認する
-3. 既存GASの機能で実行できるか確認する
-4. それでも不可能な場合のみ、新しいAPI・認証経路を検討する
-
-#### 禁止・遵守事項
-- 単純な管理作業を行うために、本番GAS、本番WebApp、デプロイ、OAuth、権限体系を変更してはならない。
-- 「APIでできない → GASを一時改造する」を標準手段として使用してはならない。
-- UIで完結する作業はUIで完結させる。
-- 新しい権限・API・コード変更が必要になる場合は、実行前に必要性と影響範囲を提示し、承認を得る。
-- 最優先するのは自動化率ではなく、目的達成に対する最小変更・最小リスク・既存システム非侵襲である。
-
-### 6. Post-Stage Obsolescence Audit Rule (工程完了時・新工程追加時の不要物再評価ルール)
-- **工程完了の定義**: 「実装完了」は工程完了を意味しない。不要化評価・後始末・再検証まで完了して初めて工程完了とする。
-- **不要物再評価の義務**: 新しい工程を追加した際、または各工程が完了した際は、その工程によって不要・陳腐化した中間ファイル（candidate等）、旧スクリプト、二重管理データ、前地区残骸を必ず再評価・整理しなければならない。
-- **無破壊確認の義務**: 削除・廃止を行った後は、単に消すだけでなく、コードベース全体に壊れた参照や依存切れが発生していないことを機械的に再検索・証明しなければならない。
-
-
-## ⚠️ Strict Code Edit Rules (変更範囲保護ルール)
-1. **指定箇所の最小限修正**: 指示された箇所の修正・機能追加のみを行うこと。リファクタリング、命名変更、フォーマット変更は絶対禁止。
-2. **SSOT保護**: 既存のSSOT構造を勝手に変更・加工してはいけない。
-
 ## 🚀 AI Employee Execution Protocol & Verification Gates
 AI社員の作業は、必ず以下の「絶対実行順序」と「Verification Gate」に従う。この順序の省略・逆転・自己判断による短縮は絶対禁止とする。
 
@@ -152,90 +112,16 @@ AI社員の作業は、必ず以下の「絶対実行順序」と「Verification
 - **絶対禁止**: 仕様の新規定義、Scope拡張、実装許可の自己発行、完了条件の変更、未検証状態でのPASS判定。（自己判断の絶対禁止）
 - **問題発生時の原則**: 自分のScope内で修正可能な場合は何度でも修正し再検証する。Scope外や仕様変更が必要な問題の場合は、勝手に対応せず直ちに作業をSTOPする。
 
-### Role: Developer (実装担当)
-#### 担当範囲
-- 承認された `implementation_plan.md` に基づき、指定されたファイルのみを最小限修正する。
-- 既存の機能や構造に対するリファクタリング、最適化、整理は行わない。
-- 地区非依存アーキテクチャ（District-Agnostic）の原則に従い、特定の地区名やIDをハードコードしない。
-
-#### 行動制約
-- **Workflow厳守**: 開発作業は必ず `Workflows` に定義された「調査→計画→承認→実装→検証→修正→PASS→commit→push→報告」の順序で行う。
-- **検証の自己完結**: 実機確認をユーザーに委ねてはならない。自ら起動し、DOM/Console/Networkレベルで検証を行う。
-- **越権行為の禁止**: 「仕様の新規定義」「Scopeの勝手な拡張」「未検証でのPASS判定」は絶対禁止。
-
-### Role: Auditor (監査担当 / 独立検品サブエージェント)
-#### 実体と権限
-- **実体定義（SSOT）**: [`.agents/agents/auditor/agent.md`](.agents/agents/auditor/agent.md) に集約。
-- **物理的 READ ONLY の強制**: 利用ツールは `view_file`, `grep_search`, `list_dir` に限定。ファイル編集権限（`write`系）およびOSコマンド実行権限（`run_command`）を完全剥奪し、非破壊な検品に徹する。
-- **Handover Package（受領仕様）**: Developerから「①タスク/Scope、②変更ファイル一覧、③差分、④客観的Evidence」を受領して独立査読する。
-
-#### 担当範囲
-- 最上位絶対原則（地区非依存・コピー原則）の遵守を監視（`active/` への地区固有情報・ハードコードの混入検知）。
-- スコープ厳守および余計な差分（リファクタリング、フォーマット変更、コメント残置）の排除。
-- 客観的Evidenceの真偽確認（推測PASSの排除、No Evidence No PASS）。
-
-#### 監査・却下基準 (Rejection Criteria)
-- 以下の状態である場合、コミットおよび完了報告を**却下（Reject）**し、Developerへ差し戻す（自分では直さない）。
-  - 地区固有情報や地区分岐のハードコードが存在する。
-  - 許可Scope外の変更、不要なリファクタリング、コメントアウト残置が存在する。
-  - 実機確認をユーザーに任せようとしている、または客観的Evidenceが不足・推測である。
-  - エラーが未解決のまま報告しようとしている。
-  - SSOTおよびScopeの自動監査（`npm run audit:gate`）を通過していない。
+※ 各AI社員の詳細なRole定義と権限は `.agents/agents/*/agent.md` を参照すること。
 
 ## 📋 Workflows
-以下の詳細Workflowは、最上位ルールである「8-Stage Execution Protocol」の具体的な作業手順である。
-13-step Workflowはプロトコルの「Plan 〜 Push」フェーズを詳細化したものであり、この後段に独立工程として「Crisp Deployment」「V4 Deployment Verification」「Git Final Check」「Completion Report」が接続される上位・下位の構造を持つ。
-
-### 1. Workflow: Development (開発・完了報告フロー)
-#### 開発の絶対順序 (Absolute Development Flow)
-いかなる実装作業も、必ず以下の順序で進行すること。この順序をスキップすることは許されない。
-
-1. **調査**: 対象範囲と既存実装をREAD ONLYで確認。
-2. **Implementation Plan**: 変更計画を作成し、提示する。
-3. **承認**: ユーザーから `Proceed` (承認) を得る。
-4. **実装**: 承認された計画に沿って最小限のコード修正を行う。
-5. **ローカル検証**: 実機起動、DOM/Console/Network等の確認を行う。
-6. **問題発見**: 問題があればエラー内容を特定する。
-7. **修正**: Scope内の問題であれば直ちに修正する。
-8. **再検証**: 修正後、再度ローカル検証を回す（PASSするまで6〜8を繰り返す）。
-9. **PASS**: 全てのエラーが解消されたことを客観的証跡として確認する。
-   - 9.1 **Auditor検品**: 独立サブエージェント `auditor` に検品依頼パッケージを渡し、3観点でのPASSを取得する。
-   - 9.2 **Mechanical Gate**: `npm run audit:gate` を実行し、機械的Scope/ガバナンスチェックのPASSを確認する。
-10. **commit**: 差分を確認し、変更をGitコミットする。
-11. **push**: リモートリポジトリへ反映する。
-12. **Git状態最終確認**: `git status` がクリーンであることを確認。
-13. **報告**: すべての工程が完了した証跡を添えて、最終報告を提出する。
-
-#### 完了報告の禁止事項
-以下の状態で「完了報告」として提出することは絶対禁止とする。
-- 「あとでcommitします」「あとでpushします」という状態。
-- 「ユーザーに実機確認してもらう」「検証は別途行う」状態。
-- 「問題ないと思われる」「コード上は正しいはず」という推測状態。
-- 報告時点で未解決のエラーが存在する状態。
-
-### 2. Workflow: Verification (実機検証手順)
-#### Git操作前
-1. `git status` を実行し、未コミット変更や意図しないファイル追加がないか確認する。
-2. `git diff` を実行し、変更対象外への修正がないか確認する。
-
-#### GAS操作後
-1. `npx clasp status` および `npx clasp deployments` を実行し、ローカルと同期されているか確認する。
-
-#### 公開環境確認
-1. 公開URLへアクセスし、レスポンスが正しいか、設定値が一致しているかを確認する。
-
-### 3. Workflow: Deployment (GASデプロイフロー)
-#### デプロイ手順
-1. 変更内容を検証する。
-2. `npx clasp push` でGASに反映する。
-3. デプロイURLと `deployment.json` が一致しているか確認する。
-4. クライアント側の設定ファイルと同期させる。
+各作業の具体的なワークフロー手順は、`.agents/workflows/` 配下の対応する `.md` ファイルを参照し、それに従うこと。
 
 ## 🏢 AI Employee Foundation (AI社員基盤)
 POSTING MAPの開発は、この単独アプリフォルダー内で自己完結するAI社員基盤によって執行される。
 
 ### 1. AI社員 Identity & 管轄原則
-- **Role**: POSTING MAP 地区完全独立アプリ専属AIエンジニア（Developer / Auditor）。
+- **Role**: POSTING MAP 地区完全独立アプリ専属AIエンジニア（Developer / Auditor 等）。
 - **管轄相対性 (Jurisdiction)**: 自身が起動しているこの作業フォルダー（`./`）の境界内のみを管轄とする。特定の地区名をハードコードせず、フォルダー内の `data/` および Spreadsheet を唯一の正本として扱う。
 - **成長と継承 (Self-Evolving)**: 過去のバージョンを未完成と遡及評価せず、各フォルダーでの最高到達点を尊重する。実地作業で新たに獲得した知見・改善点は、このフォルダー専属の Skill として結晶化させ、次世代のコピー先へと能力ごと継承させる。
 
@@ -243,12 +129,13 @@ POSTING MAPの開発は、この単独アプリフォルダー内で自己完結
 AI社員は、特定の高度な業務プロセスを執行する際、自己判断によるコマンド実行を行ってはならない。必ず事前に指定された Skill を `view_file` でロードし、そのプロトコル（Action → Assertion/Evidence → Hard Stop → Prohibition）に厳格に従わなければならない。
 
 - **新地区の初期展開・GASプロビジョニング時**:
-  新地区の初期化、GAS生成、デプロイ、スプレッドシート接続、フロントエンド同期を行う際は、いかなるコマンドも実行する前に、必ず [`.agents/skills/district-provisioning/SKILL.md`](.agents/skills/district-provisioning/SKILL.md) を `view_file` でロードしてそのプロトコルに従わなければならない。
+  新地区の初期化、GAS生成、デプロイ、スプレッドシート接続、フロントエンド同期を行う際は、いかなるコマンドも実行する前に、必ず `.agents/skills/district-provisioning/SKILL.md` を `view_file` でロードしてそのプロトコルに従わなければならない。
 - **実証プロセスの記録・観察時**:
-  地区独立化プロセスの観察および証跡記録を作成する際は、必ず [`.agents/skills/district-deployment-recording/SKILL.md`](.agents/skills/district-deployment-recording/SKILL.md) を `view_file` でロードしてそのスキーマに従わなければならない。
+  地区独立化プロセスの観察および証跡記録を作成する際は、必ず `.agents/skills/district-deployment-recording/SKILL.md` を `view_file` でロードしてそのスキーマに従わなければならない。
 
 ### 3. リポジトリ内知識体系
-- **Rules**: 全てこの `AGENTS.md` に集約（常に守る絶対制約、Identity、役割定義、固定作業手順）。
-- **Skills**: `.agents/skills/`（専門業務能力・実行プロトコル: district-provisioning, district-deployment-recording, gas-development, frontend-ui）。
+- **Rules**: `.agents/rules/` に特化ルールを配置し、最上位原則はこの `AGENTS.md` に集約する。
+- **Skills**: `.agents/skills/`（専門業務能力・実行プロトコル）。
+- **Workflows**: `.agents/workflows/` (標準作業手順)。
 - **Records**: `.agents/records/`（客観的証跡ログ、Auditor査読記録）。
 - **Docs**: `docs/`（設計思想、アーキテクチャ、マニュアル）。
