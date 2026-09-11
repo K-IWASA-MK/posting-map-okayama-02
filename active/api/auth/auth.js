@@ -58,25 +58,10 @@ function authenticateRequest(payload) {
 
     const profileData = JSON.parse(response.getContentText());
 
-    if (typeof StaffService === 'undefined') {
-      throw new Error("StaffService is missing. Cannot authorize.");
-    }
-    const staffIdentity = StaffService.getInstance().resolveStaffIdentity(profileData.userId);
-    if (!staffIdentity || !staffIdentity.found) {
-      console.warn("Authorization failed: User " + profileData.userId + " is not registered in Roster.");
-      return {
-        success: false,
-        code: "FORBIDDEN",
-        message: "Forbidden: Not registered as STAFF"
-      };
-    }
-
     const user = {
       lineUserId: profileData.userId,
       displayName: profileData.displayName,
-      pictureUrl: profileData.pictureUrl,
-      staffId: staffIdentity.staffId,
-      staffName: staffIdentity.staffName
+      pictureUrl: profileData.pictureUrl
     };
 
     // 4. 検証成功後に Session 保存
