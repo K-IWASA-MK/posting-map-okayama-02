@@ -144,5 +144,7 @@
   ".agents/workflows/development/workflow.md",
   ".agents/workflows/verification/workflow.md",
   ".agents/workflows/deployment/workflow.md",
-  ".agents/agents/district-deployment-recorder/agent.md"
+  ".agents/agents/district-deployment-recorder/agent.md",
+  "scripts/check-scope.mjs",
+  ".agents/auditor/evidence-checker.js"
 ]
