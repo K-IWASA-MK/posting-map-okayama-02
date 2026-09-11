@@ -151,5 +151,6 @@
   ".agents/agents/district-deployment-recorder/agent.md",
   "scripts/check-scope.mjs",
   ".agents/auditor/evidence-checker.js",
-  "active/api/auth/auth.js"
+  "active/api/auth/auth.js",
+  ".agents/skills/census-small-area-master/SKILL.md"
 ]
