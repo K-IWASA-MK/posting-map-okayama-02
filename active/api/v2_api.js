@@ -142,15 +142,13 @@ function doGet(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-  } else if (!isReadOnlyAction && !isDashboardAction) {
+  } else {
     const auth = authenticateRequest(params);
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))
         .setMimeType(ContentService.MimeType.JSON);
     }
     e.user = auth.user;
-  } else {
-    e.user = null;
   }
   const res = processGetActionLegacy(action, e);
   if (res && typeof res.setMimeType === 'function') {
@@ -508,7 +506,7 @@ function doPost(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-  } else if (!isReadOnlyAction && !isDashboardAction) {
+  } else {
     const auth = authenticateRequest(postData || {});
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))
@@ -518,12 +516,6 @@ function doPost(e) {
       postData.user = auth.user;
     } else {
       postData = { user: auth.user };
-    }
-  } else {
-    if (postData) {
-      postData.user = null;
-    } else {
-      postData = { user: null };
     }
   }
   const res = processPostAction(action, postData, e);
