@@ -63,6 +63,7 @@ graph TD
     S4 --> S5[Stage 5: area_mapping.json 構築]
     S5 --> S6[Stage 6: 4大マスターファイル生成]
     S6 --> S7[Stage 7: 5層 Verification Gate 実行]
+    S7 --> S8[Stage 8: バックエンド・スプレッドシート同期 & デプロイ]
 ```
 
 ### Stage 1: e-Stat 国勢調査小地域 Shapefile の調達と展開
@@ -124,6 +125,27 @@ graph TD
    - 5観点（地区非依存、スコープ厳守、証跡、ゼロ手作業、公式データ確定）による客観査読 PASS。
 5. **Audit Gate**:
    - `npm run audit:gate` (Scope Guard & Governance Gate) の通過。
+
+### Stage 8: バックエンド・スプレッドシート月次業務データ同期（Backend & Spreadsheet Deployment Gate）
+マスターの更新完了後、フロントエンドだけでなく「スプレッドシート業務データ」「GASバックエンド」「本番API」までを完全に一本につなぎ直す。
+
+1. **Spreadsheet業務データ・原本の同期 (`DistrictProvisioner`)**:
+   - `scripts/provision-district.mjs` を実行し、GAS側で `DistrictProvisioner.getInstance().provisionNewDistrict(addresses, options)` をトリガーする。
+   - **「配布実績の原本」**: 新マスターの全件数（M件）に展開。
+   - **当月業務シート「配布実績YYYY-MM」**:
+     - **クリーン初期化モード時**: `--reset-existing-records`（`options.resetExistingRecords === true`）を明示指定して全M件を初期化（完了0件、0%）。
+     - **重要**: `resetExistingRecords: true` はデフォルト動作にしてはならない。明示指定時のみクリーン初期化し、指定がない場合は既存実績を保護すること（本番実績継承地区での不用意なデータ消失を防止）。
+2. **GASバックエンドの同期 & 本番デプロイ**:
+   - `npx clasp push` で最新HEADコードをGASプロジェクトへ反映。
+   - `npx clasp deploy -i <DeploymentId> -d "<ReleaseNote>"` で本番Versionを更新。
+3. **本番 API 実測値・実機検証**:
+   - `getSystemSummary` を呼び出し、以下を客観的Evidenceとして確認する：
+     - `districtName`: 対象地区コード（スプレッドシート名SSOT）
+     - `total`: M件（新小地域マスター総数）
+     - `done`: 0（クリーン初期化時）または継承完了数
+     - `percent`: 0%（クリーン初期化時）または継承完了率
+     - `online`: true
+   - **Hアプリ / Manager実機**: ヘッダーおよび統計バッジで M件 / 0 / 0% を確認。
 
 ---
 

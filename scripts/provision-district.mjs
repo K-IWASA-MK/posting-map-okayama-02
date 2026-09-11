@@ -124,12 +124,18 @@ async function main() {
     }
   }
 
+  const resetExistingRecords = process.argv.includes('--reset-existing-records') || process.env.RESET_EXISTING_RECORDS === 'true';
+  if (resetExistingRecords) {
+    console.log('⚠️  Explicit Reset Mode: resetExistingRecords is TRUE (All existing distribution records will be reset to 0%).');
+  }
+
   const options = {
     provisioningToken: provisioningToken,
     productionLiffUrl: productionLiffUrl,
     liffId: liffId,
     districtBaseUrl: districtBaseUrl,
-    baseUrl: districtBaseUrl
+    baseUrl: districtBaseUrl,
+    resetExistingRecords: resetExistingRecords
   };
 
   if (lineChannelAccessToken) {

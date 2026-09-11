@@ -111,7 +111,7 @@
 
         this.createMasterSheets(ss, addresses);
 
-        const monthResult = this.rolloverMonthlySheets();
+        const monthResult = this.rolloverMonthlySheets(null, options);
 
         if (typeof cleanupPinStatusDaily === 'function') {
           cleanupPinStatusDaily();
@@ -516,7 +516,7 @@
      * @param {string} [targetMonth] - 生成対象年月 (YYYY-MM)。未指定時は現在月。
      * @return {Object} 結果 { success: true, month: string, created: string[] }
      */
-    rolloverMonthlySheets(targetMonth) {
+    rolloverMonthlySheets(targetMonth, options = {}) {
       const ss = this.getSS();
       const month = targetMonth || (
         typeof MonthlySheetResolver !== 'undefined' && MonthlySheetResolver.getInstance
@@ -568,7 +568,8 @@
                 existingCompletedCount = existingData.filter(r => r[3] && String(r[3]).trim() !== "").length;
               }
 
-              if (existingCompletedCount > 0) {
+              const shouldReset = options && options.resetExistingRecords === true;
+              if (existingCompletedCount > 0 && !shouldReset) {
                 console.log(`[rolloverMonthlySheets] distribution sheet has ${existingCompletedCount} completed records. Preserving existing distribution records.`);
               } else {
                 if (currentLr >= 2) {
