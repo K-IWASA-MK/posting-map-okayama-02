@@ -79,9 +79,23 @@ function doGet(e) {
 
   const action = params.action || "";
 
-  const isPublicBootstrapAction = [
+  const isReadOnlyAction = [
     'getSystemSummary',
-    'getMapsApiKey'
+    'getDashboardData',
+    'getTier1',
+    'getFlyerStock',
+    'getRanking',
+    'getLatestDistribution',
+    'getMapsApiKey',
+    'getDeliveryStats',
+    'getAreaDetails',
+    'getGlobalPinStatus',
+    'getBulletinPosts'
+  ].includes(action);
+
+  const isDashboardAction = [
+    'getRoster',
+    'getTransferRequests'
   ].includes(action);
 
   if (action === 'registerOrValidateDevice') {
@@ -128,7 +142,7 @@ function doGet(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-  } else if (!isPublicBootstrapAction) {
+  } else if (!isReadOnlyAction && !isDashboardAction) {
     const auth = authenticateRequest(params);
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))
@@ -261,9 +275,23 @@ function doPost(e) {
   }
   const action = (postData && postData.action) || params.action || (e && e.parameter && e.parameter.action) || "";
 
-  const isPublicBootstrapAction = [
+  const isReadOnlyAction = [
     'getSystemSummary',
-    'getMapsApiKey'
+    'getDashboardData',
+    'getTier1',
+    'getFlyerStock',
+    'getRanking',
+    'getLatestDistribution',
+    'getMapsApiKey',
+    'getDeliveryStats',
+    'getAreaDetails',
+    'getGlobalPinStatus',
+    'getBulletinPosts'
+  ].includes(action);
+
+  const isDashboardAction = [
+    'getRoster',
+    'getTransferRequests'
   ].includes(action);
 
   if (action === 'registerOrValidateDevice') {
@@ -481,7 +509,7 @@ function doPost(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-  } else if (!isPublicBootstrapAction) {
+  } else if (!isReadOnlyAction && !isDashboardAction) {
     const auth = authenticateRequest(postData || {});
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))
@@ -624,6 +652,18 @@ function processPostAction(action, postData, e) {
       );
     case 'getGlobalPinStatus':
       return PinStatusService.getInstance().getStatus();
+    case 'getBulletinPosts':
+      return typeof BulletinService !== 'undefined' && BulletinService.getInstance
+        ? BulletinService.getInstance().getPosts()
+        : { success: false, message: 'BulletinService not available' };
+    case 'createBulletinPost':
+      return typeof BulletinService !== 'undefined' && BulletinService.getInstance
+        ? BulletinService.getInstance().createPost(postData)
+        : { success: false, message: 'BulletinService not available' };
+    case 'sendBulletinContact':
+      return typeof BulletinService !== 'undefined' && BulletinService.getInstance
+        ? BulletinService.getInstance().sendContact(postData)
+        : { success: false, message: 'BulletinService not available' };
     case 'setPinInProgress':
       return PinStatusService.getInstance().setInProgress(postData);
     case 'provisionDistrict':
