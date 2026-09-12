@@ -73,7 +73,6 @@
   "active/infrastructure/spreadsheet/spreadsheet_adapter.js",
   ".claspignore",
   "active/business/staff/staff_service.js",
-  "active/business/device/device_management_service.js",
   "active/business/pin/pin_status_service.js",
   "active/business/transfer/transfer_service.js",
   "index.html",
@@ -148,12 +147,5 @@
   "scripts/check-scope.mjs",
   ".agents/auditor/evidence-checker.js",
   "active/api/auth/auth.js",
-  ".agents/skills/census-small-area-master/SKILL.md",
-  "active/dashboard/components/badge.js",
-  "active/dashboard/components/card.js",
-  "active/dashboard/components/list-item.js",
-  "active/dashboard/components/progress.js",
-  "active/business/area/area_model.js",
-  "active/business/flyer/flyer_model.js",
-  "active/business/gps/gps_model.js"
+  ".agents/skills/census-small-area-master/SKILL.md"
 ]
