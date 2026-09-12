@@ -148,5 +148,12 @@
   "scripts/check-scope.mjs",
   ".agents/auditor/evidence-checker.js",
   "active/api/auth/auth.js",
-  ".agents/skills/census-small-area-master/SKILL.md"
+  ".agents/skills/census-small-area-master/SKILL.md",
+  "active/dashboard/components/badge.js",
+  "active/dashboard/components/card.js",
+  "active/dashboard/components/list-item.js",
+  "active/dashboard/components/progress.js",
+  "active/business/area/area_model.js",
+  "active/business/flyer/flyer_model.js",
+  "active/business/gps/gps_model.js"
 ]
