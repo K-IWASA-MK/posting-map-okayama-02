@@ -333,10 +333,12 @@
       }
 
       const districtName = ss.getName();
-
-      const baseUrl = String(opts.baseUrl || opts.districtBaseUrl || "").trim();
-      const hAppUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/` : "";
-      const dashboardUrl = baseUrl ? `${baseUrl.replace(/\/+$/, '')}/active/manager/` : "";
+      const subdomain = districtName.toLowerCase();
+      const baseUrl = (opts.baseUrl && opts.baseUrl !== "https://postingmap.jp")
+        ? opts.baseUrl
+        : `https://${subdomain}.postingmap.jp`;
+      const hAppUrl = `${baseUrl}/`;
+      const dashboardUrl = `${baseUrl}/active/manager/`;
 
       let liffUrl = opts.productionLiffUrl || "";
       let liffId = opts.liffId || "";
@@ -356,6 +358,25 @@
         } catch (e) {}
       }
 
+      let managerPassword = opts.managerPassword || "";
+      if (!managerPassword && sheet) {
+        try {
+          const lastRow = sheet.getLastRow();
+          if (lastRow > 1) {
+            const data = sheet.getRange(1, 1, lastRow, 2).getValues();
+            for (let i = 0; i < data.length; i++) {
+              if (data[i][0] === "Manager認証パスワード" && data[i][1]) {
+                managerPassword = String(data[i][1]).trim();
+                break;
+              }
+            }
+          }
+        } catch (e) {}
+      }
+      if (!managerPassword) {
+        managerPassword = String(Math.floor(100000 + Math.random() * 900000));
+      }
+
       const headers = [["項目", "内容"]];
       const rows = [
         ["地区コード", districtName],
@@ -366,6 +387,7 @@
         ["LIFF ID", liffId],
         ["LIFF URL", liffUrl],
         ["Endpoint URL", hAppUrl],
+        ["Manager認証パスワード", managerPassword],
         ["状態", "ACTIVE"]
       ];
 

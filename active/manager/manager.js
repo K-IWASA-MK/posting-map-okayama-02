@@ -111,12 +111,150 @@ if (document.readyState === 'loading') {
   initDashboard();
 }
 
+let _isDashboardInitialized = false;
+
+function getResolvedDistrictCode() {
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const host = window.location.hostname.toLowerCase();
+    const parts = host.split('.');
+    if (parts.length >= 2 && parts[0] && parts[0] !== 'www' && parts[0] !== 'localhost') {
+      return parts[0].toUpperCase();
+    }
+  }
+  if (DashboardState && DashboardState.districtCode) {
+    return DashboardState.districtCode;
+  }
+  try {
+    const lastDistrict = localStorage.getItem('pm_last_district');
+    if (lastDistrict) return lastDistrict;
+  } catch (e) {}
+
+  return 'DEFAULT';
+}
+
+async function checkManagerAuth() {
+  const districtCode = getResolvedDistrictCode();
+  DashboardState.districtCode = districtCode;
+  const authKey = 'pm_auth_' + districtCode;
+
+  let isLocallyAuthed = false;
+  try {
+    isLocallyAuthed = (localStorage.getItem(authKey) === 'true' || sessionStorage.getItem(authKey) === 'true');
+  } catch (e) {}
+
+  if (isLocallyAuthed) {
+    callApiPost('getSystemSummary').then(summary => {
+      if (summary && summary.districtName) {
+        DashboardState.districtCode = summary.districtName;
+        DashboardState.summary = summary;
+      }
+    }).catch(err => {
+      console.warn('[Background SystemSummary Error]', err);
+    });
+    return true;
+  }
+
+  try {
+    const summary = await callApiPost('getSystemSummary');
+    if (summary && summary.districtName) {
+      DashboardState.districtCode = summary.districtName;
+      DashboardState.summary = summary;
+      const verifiedAuthKey = 'pm_auth_' + summary.districtName;
+      if (localStorage.getItem(verifiedAuthKey) === 'true' || sessionStorage.getItem(verifiedAuthKey) === 'true') {
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn('[Auth Check Error]', err);
+  }
+  return false;
+}
+
+function showManagerPinGate() {
+  const gateEl = document.getElementById('manager-pin-gate');
+  if (gateEl) {
+    gateEl.classList.remove('hidden');
+    const inputEl = document.getElementById('manager-pin-input');
+    if (inputEl) {
+      setTimeout(() => inputEl.focus(), 100);
+    }
+  }
+}
+
+function hideManagerPinGate() {
+  const gateEl = document.getElementById('manager-pin-gate');
+  if (gateEl) {
+    gateEl.classList.add('hidden');
+  }
+}
+
+async function handleManagerPinSubmit(event) {
+  if (event) event.preventDefault();
+  const inputEl = document.getElementById('manager-pin-input');
+  const errorEl = document.getElementById('manager-pin-error');
+  const btnText = document.getElementById('manager-pin-btn-text');
+  const btnSpinner = document.getElementById('manager-pin-btn-spinner');
+  const btn = document.getElementById('manager-pin-btn');
+
+  if (!inputEl) return;
+  const pin = inputEl.value.trim();
+  if (pin.length !== 6) {
+    if (errorEl) errorEl.textContent = '6桁のパスワードを入力してください';
+    inputEl.focus();
+    return;
+  }
+
+  if (errorEl) errorEl.textContent = '';
+  if (btn) btn.disabled = true;
+  if (btnText) btnText.textContent = '照合中...';
+  if (btnSpinner) btnSpinner.classList.remove('hidden');
+
+  try {
+    const res = await callApiPost('verifyManagerPassword', { password: pin }, { timeoutMs: 45000 });
+    if (res && res.success) {
+      const districtCode = res.districtCode || getResolvedDistrictCode();
+      localStorage.setItem('pm_auth_' + districtCode, 'true');
+      localStorage.setItem('pm_last_district', districtCode);
+      DashboardState.districtCode = districtCode;
+      hideManagerPinGate();
+      await startDashboardLifecycle();
+    } else {
+      if (errorEl) errorEl.textContent = (res && res.message) || '認証コードが正しくありません';
+      inputEl.focus();
+    }
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message || '通信エラーが発生しました';
+    inputEl.focus();
+  } finally {
+    if (btn) btn.disabled = false;
+    if (btnText) btnText.textContent = 'ログイン';
+    if (btnSpinner) btnSpinner.classList.add('hidden');
+  }
+}
+if (typeof window !== 'undefined') {
+  window.handleManagerPinSubmit = handleManagerPinSubmit;
+}
+
 async function initDashboard() {
   const urlParams = new URLSearchParams(window.location.search);
   const pairKey = urlParams.get('pair');
   if (pairKey) {
     history.replaceState(null, '', window.location.pathname);
   }
+
+  const isAuth = await checkManagerAuth();
+  if (!isAuth) {
+    showManagerPinGate();
+    return;
+  }
+
+  hideManagerPinGate();
+  await startDashboardLifecycle();
+}
+
+async function startDashboardLifecycle() {
+  if (_isDashboardInitialized) return;
+  _isDashboardInitialized = true;
 
   initMap();
   updateNavHighlight('areas');
@@ -162,12 +300,13 @@ async function fetchStaticDataFile(filename) {
   throw new Error(`Failed to load static file: ${filename}`);
 }
 
-async function callApiPost(action, payload = {}) {
+async function callApiPost(action, payload = {}, options = {}) {
+  const timeoutMs = options.timeoutMs || 25000;
   const url = `${getApiUrl()}?action=${encodeURIComponent(action)}&_t=${Date.now()}`;
   const body = JSON.stringify({ action, ...payload });
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const response = await fetch(url, {
     method: 'POST',
