@@ -14,6 +14,7 @@
   ".agents/records/record-019-okayama-02-phase3-census-aggregation-audit.md",
   ".agents/rules/core-rules.md",
   ".agents/rules/district-data-transition-rule.md",
+  ".agents/rules/district-external-data-governance-rule.md",
   ".agents/rules/legacy-cleanup-rule.md",
   ".agents/rules/security-rule.md",
   ".agents/rules/ui-rule.md",
