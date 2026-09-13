@@ -52,6 +52,7 @@
 ### 遵守事項
 - **リポジトリ汚染の遮断**: コピー元地区の Shapefile や巨大な ZIP ファイルを新地区リポジトリの Git 履歴に混入させてはならない（AGENTS.md 第0条・第4条厳守）。
 - **新地区原本の取得**: 新地区のマスター生成や境界検証に必要な一次原本は、新地区用に新しく取得して配置・検証すること。
+- **外部原本の保管統制**: 新地区用の外部原本の取得・保管（地区専用Google Driveでの管理）およびscratch保存禁止ルールについては、[district-external-data-governance-rule.md](district-external-data-governance-rule.md) に従うこと。
 
 ---
 
