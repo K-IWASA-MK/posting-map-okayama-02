@@ -1,5 +1,6 @@
 [
   ".agents/agents/auditor/agent.md",
+  ".agents/agents/deployer/agent.md",
   ".agents/agents/district-deployment-recorder/agent.md",
   ".agents/auditor/evidence-checker.js",
   ".agents/records/record-012-stage-1-district-data-establishment.md",
@@ -23,6 +24,7 @@
   ".agents/skills/district-provisioning/SKILL.md",
   ".agents/skills/official-data-confirmation-audit/SKILL.md",
   ".agents/workflows/development/workflow.md",
+  ".agents/workflows/district-deployment/workflow.md",
   ".claspignore",
   ".gitignore",
   "AGENTS.md",
