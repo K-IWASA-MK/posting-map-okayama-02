@@ -186,5 +186,6 @@
   "scripts/validate-district-data-gate.mjs",
   "scripts/validate-gas-endpoint-ssot.mjs",
   "scripts/verify-runtime-integrity.mjs",
-  "tests/dashboard_verification_gate.mjs"
+  "tests/dashboard_verification_gate.mjs",
+  "implementation_plan.md"
 ]
