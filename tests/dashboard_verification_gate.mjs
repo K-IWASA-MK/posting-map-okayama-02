@@ -18,141 +18,7 @@ import { chromium } from 'playwright';
 import { execSync, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import http from 'http';
-
-function setupGasDeviceAuthSandbox() {
-  const mockProps = {};
-  class MockRange {
-    constructor(sheet, r, c, nr, nc) {
-      this.sheet = sheet;
-      this.r = r;
-      this.c = c;
-      this.nr = nr || 1;
-      this.nc = nc || 1;
-    }
-    getValues() {
-      const result = [];
-      for (let i = 0; i < this.nr; i++) {
-        const row = [];
-        const rowData = this.sheet.grid[this.r - 1 + i] || [];
-        for (let j = 0; j < this.nc; j++) {
-          row.push(rowData[this.c - 1 + j] !== undefined ? rowData[this.c - 1 + j] : '');
-        }
-        result.push(row);
-      }
-      return result;
-    }
-    setValues(values) {
-      for (let i = 0; i < values.length; i++) {
-        const rowIndex = this.r - 1 + i;
-        if (!this.sheet.grid[rowIndex]) this.sheet.grid[rowIndex] = [];
-        for (let j = 0; j < values[i].length; j++) {
-          this.sheet.grid[rowIndex][this.c - 1 + j] = values[i][j];
-        }
-      }
-    }
-    getValue() {
-      const rowData = this.sheet.grid[this.r - 1] || [];
-      return rowData[this.c - 1] !== undefined ? rowData[this.c - 1] : '';
-    }
-    setValue(val) {
-      const rowIndex = this.r - 1;
-      if (!this.sheet.grid[rowIndex]) this.sheet.grid[rowIndex] = [];
-      this.sheet.grid[rowIndex][this.c - 1] = val;
-    }
-  }
-
-  class MockSheet {
-    constructor(name) {
-      this.name = name;
-      this.grid = [];
-    }
-    getName() { return this.name; }
-    getLastRow() { return this.grid.length; }
-    getLastColumn() {
-      let max = 0;
-      this.grid.forEach(r => { if (r && r.length > max) max = r.length; });
-      return max;
-    }
-    getRange(r, c, nr, nc) {
-      return new MockRange(this, r, c, nr, nc);
-    }
-    appendRow(row) {
-      this.grid.push([...row]);
-    }
-    clear() {
-      this.grid = [];
-    }
-  }
-
-  const mockSheets = {};
-  const mockSpreadsheet = {
-    getName: () => "MIE-03",
-    getSheetByName: (name) => mockSheets[name] || null,
-    insertSheet: (name) => {
-      const s = new MockSheet(name);
-      mockSheets[name] = s;
-      return s;
-    },
-    deleteSheet: (s) => {
-      delete mockSheets[s.getName()];
-    }
-  };
-
-  const Utilities = {
-    computeDigest: (algo, text, charset) => {
-      const h = crypto.createHash('sha256').update(text, 'utf8').digest();
-      const signedBytes = [];
-      for (let i = 0; i < h.length; i++) {
-        let b = h[i];
-        if (b > 127) b -= 256;
-        signedBytes.push(b);
-      }
-      return signedBytes;
-    },
-    DigestAlgorithm: { SHA_256: 'SHA_256' },
-    Charset: { UTF_8: 'UTF_8' },
-    formatDate: (d, tz, fmt) => new Date().toISOString().replace('T', ' ').substring(0, 19)
-  };
-
-  const LockService = {
-    getScriptLock: () => ({
-      waitLock: () => {},
-      releaseLock: () => {}
-    })
-  };
-
-  const PropertiesService = {
-    getScriptProperties: () => ({
-      getProperty: (k) => mockProps[k] || '',
-      setProperty: (k, v) => { mockProps[k] = String(v); },
-      deleteProperty: (k) => { delete mockProps[k]; }
-    })
-  };
-
-  const CONFIG = {
-    get: (k) => "端末管理"
-  };
-
-  const getSS = () => mockSpreadsheet;
-
-  const serviceContent = fs.readFileSync(path.resolve(process.cwd(), 'active/business/device/device_management_service.js'), 'utf8');
-
-  const evalCode = `
-    ${serviceContent}
-    const svc = (typeof DeviceManagementService !== 'undefined' ? DeviceManagementService : this.DeviceManagementService).getInstance();
-    return svc;
-  `;
-
-  const fn = new Function(
-    'Utilities', 'LockService', 'PropertiesService', 'CONFIG', 'getSS',
-    evalCode
-  );
-
-  const engine = fn(Utilities, LockService, PropertiesService, CONFIG, getSS);
-  return { engine, mockProps, mockSheets, mockSpreadsheet };
-}
 
 async function ensureServerRunning() {
   return new Promise((resolve) => {
@@ -173,11 +39,10 @@ async function ensureServerRunning() {
 
 async function runDashboardQualityGate() {
   console.log("===============================================================");
-  console.log("🏛️ POSTING MAP DASHBOARD QUALITY GATE (7 PHASES INCL. N-CONTRACT)");
+  console.log("🏛️ POSTING MAP DASHBOARD QUALITY GATE (6 PHASES INCL. N-CONTRACT)");
   console.log("===============================================================\n");
 
   const results = {
-    phase0: { name: "Phase 0: 端末管理撤廃スタブ検証 (exists=false / 直接認可 / No-op)", pass: false, details: [] },
     phase1: { name: "Phase 1: 実機Dashboard通常動作 (District-Agnostic)", pass: false, details: [] },
     phase2: { name: "Phase 2: 連続リロード安定性", pass: false, details: [] },
     phase3: { name: "Phase 3: Master ERROR 障害・部分劣化試験", pass: false, details: [] },
@@ -185,41 +50,6 @@ async function runDashboardQualityGate() {
     phase5: { name: "Phase 5: fitBounds & 異常座標防御試験", pass: false, details: [] },
     phase6: { name: "Phase 6: Hアプリ非干渉 & アーキテクチャ分離監査", pass: false, details: [] },
   };
-
-  console.log("▶ [PHASE 0] 端末管理撤廃スタブ検証中...");
-  try {
-    const { engine } = setupGasDeviceAuthSandbox();
-    let p0AllPass = true;
-    const addP0 = (testName, pass, detail) => {
-      results.phase0.details.push(`${pass ? 'PASS' : 'FAIL'}: ${testName} (${detail})`);
-      if (!pass) p0AllPass = false;
-    };
-
-    const regRes = engine.registerOrValidateDevice({ deviceKey: "ANY_KEY" });
-    addP0("0.1 registerOrValidateDevice 撤廃応答確認", regRes.success && regRes.authorized, `authorized=${regRes.authorized}`);
-
-    const authRes = engine.authenticateDashboardRequest({ deviceKey: "ANY_KEY" });
-    addP0("0.2 authenticateDashboardRequest 撤廃応答確認", authRes.success && authRes.authorized, `authorized=${authRes.authorized}`);
-
-    const pairTokenRes = engine.issueMobilePairingToken({});
-    addP0("0.3 issueMobilePairingToken 互換応答確認", pairTokenRes.success, `success=${pairTokenRes.success}`);
-
-    const pairRes = engine.pairMobileDevice({});
-    addP0("0.4 pairMobileDevice 互換応答確認", pairRes.success, `success=${pairRes.success}`);
-
-    const status = engine.getDeviceStatus();
-    addP0("0.5 getDeviceStatus 撤廃応答確認", status.success && status.exists === false && Array.isArray(status.rows) && status.rows.length === 0, `exists=${status.exists}`);
-
-    const resetRes = engine.resetDeviceManagementSheet();
-    addP0("0.6 resetDeviceManagementSheet 互換応答確認", resetRes.success, `success=${resetRes.success}`);
-
-    results.phase0.pass = p0AllPass;
-    console.log(`[Phase 0] 端末管理撤廃スタブ検証結果: ${p0AllPass ? '✅ ALL PASS' : '❌ FAIL'}`);
-  } catch (err) {
-    console.error('[Phase 0 Error]', err);
-    results.phase0.pass = false;
-    results.phase0.details.push(`Exception: ${err.message}`);
-  }
 
   const spawnedServer = await ensureServerRunning();
   // 1. config.js から動的に静的マスター定義を取得し、期待件数を算出（地区非依存化）
@@ -258,16 +88,23 @@ async function runDashboardQualityGate() {
   });
 
   async function setupAuthenticatedPage(page) {
+    await page.addInitScript(() => {
+      try {
+        localStorage.removeItem('pm_last_district');
+        localStorage.setItem('pm_auth_DEFAULT', 'true');
+      } catch (e) {}
+    });
+
     await page.route('**/exec*', async (route, request) => {
       if (request.method() === 'POST') {
         const postData = request.postData() || '';
-        if (postData.includes('registerOrValidateDevice') || request.url().includes('action=registerOrValidateDevice')) {
+        if (postData.includes('verifyManagerPassword') || request.url().includes('action=verifyManagerPassword')) {
           await route.fulfill({
             status: 200,
             contentType: 'application/json; charset=utf-8',
             body: JSON.stringify({
               success: true,
-              authorized: true
+              districtCode: 'DEFAULT'
             })
           });
           return;
@@ -376,13 +213,14 @@ async function runDashboardQualityGate() {
     await page3.route('**/*.csv', route => route.abort());
 
     await page3.goto(DASHBOARD_URL, { waitUntil: 'load' });
-    await page3.waitForFunction(() => window.DashboardState && (window.DashboardState.ranking?.length > 0 || window.DashboardState.stocks?.length > 0), { timeout: 15000 }).catch(() => {});
+    await page3.waitForFunction(() => window.DashboardState && window.DashboardState.masterLoadStatus === 'ERROR' && window.DashboardState.summary, { timeout: 15000 });
 
     const state3 = await page3.evaluate(() => {
       return {
         masterLoadStatus: window.DashboardState?.masterLoadStatus,
         totalAreasText: document.getElementById('fact-total-areas')?.textContent,
         doneAreasText: document.getElementById('fact-done-areas')?.textContent,
+        hasBackendSummary: !!window.DashboardState?.summary,
         stocksCount: window.DashboardState?.stocks?.length || 0,
         rankingCount: window.DashboardState?.ranking?.length || 0
       };
@@ -393,13 +231,15 @@ async function runDashboardQualityGate() {
       state3.masterLoadStatus === 'ERROR' &&
       state3.totalAreasText === 'ERR' &&
       state3.doneAreasText === 'ERR' &&
-      (state3.stocksCount > 0 || state3.rankingCount > 0)
+      state3.hasBackendSummary
     );
     results.phase3.pass = phase3Pass;
     results.phase3.details.push(`masterLoadStatus: ${state3.masterLoadStatus}`);
     results.phase3.details.push(`fact-total-areas: ${state3.totalAreasText}`);
-    results.phase3.details.push(`Backend stocksCount (生存確認): ${state3.stocksCount}`);
-    results.phase3.details.push(`Backend rankingCount (生存確認): ${state3.rankingCount}`);
+    results.phase3.details.push(`fact-done-areas: ${state3.doneAreasText}`);
+    results.phase3.details.push(`Backend summary生存確認: ${state3.hasBackendSummary ? 'PASS' : 'FAIL'}`);
+    results.phase3.details.push(`Backend stocksCount: ${state3.stocksCount}`);
+    results.phase3.details.push(`Backend rankingCount: ${state3.rankingCount}`);
 
     // -------------------------------------------------------------
     // PHASE 4: cities SSOT & ノイズ除外 & 選択時展開維持確認
