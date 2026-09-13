@@ -28,8 +28,6 @@ let _rankingFetched = false;  // ランキング遅延取得済みフラグ
 let _stockFetched = false;    // 在庫一覧取得済みフラグ
 let _stockData = [];          // 在庫一覧キャッシュデータ
 let currentCity = null;
-let lastAreaSubPage = 'areas';
-let scrollPositions = { areas: 0, settings: 0, ranking: 0 };
 window.activeRankingPromise = null;
 window.globalPinStatus = { inProgress: [], completed: [] };
 window.lastPinStatusSync = 0;
@@ -72,15 +70,6 @@ function setLoadingProgress(pct, label) {
     setTimeout(() => { txt.textContent = label; txt.style.opacity = '1'; }, 180);
   }
 }
-
-const pageIdMap = {
-  'page-areas': 'areas',
-  'page-settings': 'settings',
-  'page-ranking': 'ranking',
-  'page-storage-register': 'storage-register',
-  'page-storage-list': 'storage-list',
-  'page-bulletin': 'bulletin'
-};
 
 // プレミアム・インタラクション・スキル (JS Touch Handler)
 document.addEventListener('touchstart', e => {
@@ -219,12 +208,6 @@ function setSyncStatus(state) {
       textEl.classList.add('text-[#2563eb]', 'animate-pulse');
     }
   }
-}
-
-function updateBottomNavVisibility() {
-  const nav = $('bottom-nav');
-  const hasUser = !!localStorage.getItem('user_info');
-  if (nav) nav.style.display = hasUser ? '' : 'none';
 }
 
 let isRegistering = false;
@@ -1060,25 +1043,6 @@ window.updateStorageLocationDropdown = function updateStorageLocationDropdown(ov
   }
 }
 
-// 2層フリップ式ナビゲーション制御
-let _prevPageBeforeTier2 = 'areas'; // 次へを押す前にいたページを記憶
-
-window.toggleNavTier = function(tier) {
-  if (tier === 2) {
-    // 現在アクティブなページIDを記憶してから切り替え
-    const activePage = document.querySelector('.page:not(.hidden)');
-    if (activePage) {
-      _prevPageBeforeTier2 = pageIdMap[activePage.id] || 'areas';
-    }
-    switchPage('areas');
-  }
-};
-
-window.backToTier1 = function() {
-  // 「次へ」を押す直前に見ていた表画面へ確実に復帰
-  const targetPage = _prevPageBeforeTier2 || 'settings';
-  switchPage(targetPage);
-};
 
 // 在庫登録フォームの処理
 window.submitFlyerStock = async function() {
@@ -1141,10 +1105,6 @@ window.submitFlyerStock = async function() {
   }
 };
 
-// 下ナビの「エリア」ボタンタップ時に直前のサブページへ戻る
-function navigateToAreaTab() {
-  switchPage(lastAreaSubPage);
-}
 
 
 let lastSummaryData = null;
