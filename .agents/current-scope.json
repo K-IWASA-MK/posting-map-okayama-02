@@ -53,6 +53,7 @@
   "active/dashboard/components/navigation.js",
   "active/dashboard/config.js",
   "active/dashboard/index.html",
+  "active/dashboard/modules/api.js",
   "active/dashboard/render.js",
   "active/dashboard/v2_ui.js",
   "active/gas/sheet_guard.js",
