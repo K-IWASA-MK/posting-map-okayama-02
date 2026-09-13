@@ -28,6 +28,8 @@ description: 新地区の初期展開、GAS生成、デプロイ、スプレッ�
 本スキルは、**「フォルダーの状態（Readiness）」** と **「人間の指示（Intent）」** の双方が揃った交差点でのみ発動する。
 
 ### 発動前提（Readiness Check）
+- [ ] コピー元にて [district-pre-copy-rule.md](../../rules/district-pre-copy-rule.md) の全10項目およびコピー前ゲートが PASS していること。
+- [ ] [district-data-transition-rule.md](../../rules/district-data-transition-rule.md) に従い、新地区マスター3点セットの交換および area_mapping 初期化が完了していること。
 - [ ] 自身のカレントディレクトリが当該地区リポジトリのルート（`./`）であること。
 - [ ] `data/address_master.csv` および `data/municipality_master.csv` が配置されていること。
 - [ ] `deployment.json` に新地区のパラメータ（`districtId`, `spreadsheetId`, `storageFolderId`）が宣言されていること。
