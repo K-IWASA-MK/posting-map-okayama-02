@@ -461,27 +461,5 @@ def run_audit():
     for e in elections:
         print(f"  {e.get('electionName')} ({e.get('electionDate')}) - national: {e.get('national')}, district: {e.get('district3') or e.get('district2')}")
 
-    # Save summary report in scratch
-    scratch_report_path = os.path.join(root_dir, 'scratch', 'phase4_audit_summary.json')
-    with open(scratch_report_path, 'w', encoding='utf-8') as f:
-        json.dump({
-            'rules': results,
-            'totals': {
-                'population': {'actual': total_actual_pop, 'expected': expected_pop, 'diff': total_actual_pop - expected_pop},
-                'households': {'actual': total_actual_hh, 'expected': expected_hh, 'diff': total_actual_hh - expected_hh}
-            },
-            'city_breakdown': {
-                c: {
-                    'pop': {'actual': actual_pop_by_city.get(c, 0), 'expected': expected_breakdown[c]['pop']},
-                    'hh': {'actual': actual_hh_by_city.get(c, 0), 'expected': expected_breakdown[c]['hh']}
-                } for c in expected_breakdown
-            },
-            'election_history': {
-                'districtId': district_id,
-                'districtName': district_name,
-                'elections': elections
-            }
-        }, f, ensure_ascii=False, indent=2)
-
 if __name__ == '__main__':
     run_audit()
