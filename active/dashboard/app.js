@@ -416,6 +416,23 @@ async function loadData(skipSync = false) {
       setSyncStatus(navigator.onLine ? 'online' : 'offline');
     }
 
+    if (!window.googleMapsApiLoaded) {
+      window.googleMapsApiLoaded = true;
+      callApiPost('getMapsApiKey').then(keyData => {
+        if (keyData && keyData.success && keyData.mapsApiKey) {
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${keyData.mapsApiKey}&callback=initMainMap&language=ja`;
+          script.async = true;
+          script.defer = true;
+          document.head.appendChild(script);
+        } else {
+          window.googleMapsApiLoaded = false;
+        }
+      }).catch(err => {
+        window.googleMapsApiLoaded = false;
+      });
+    }
+
     logDebug("[loadData] Awaiting fetchSystemSummary in background...");
     const data = await fetchSystemSummary();
     logDebug("[loadData] fetchSystemSummary resolved.");
@@ -424,24 +441,6 @@ async function loadData(skipSync = false) {
       logDebug("[loadData] System Summary received: total=" + data.total + ", done=" + data.done + ", percent=" + data.percent);
       updateStats(data);
       prefetchRanking();
-
-      // 動的にGoogle Maps APIをロード（独立したAPIで取得し、既存レスポンスに影響を与えない）
-      if (!window.googleMapsApiLoaded) {
-        window.googleMapsApiLoaded = true;
-        callApiPost('getMapsApiKey').then(keyData => {
-          if (keyData && keyData.success && keyData.mapsApiKey) {
-            const script = document.createElement('script');
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${keyData.mapsApiKey}&callback=initMainMap&language=ja`;
-            script.async = true;
-            script.defer = true;
-            document.head.appendChild(script);
-          } else {
-            window.googleMapsApiLoaded = false;
-          }
-        }).catch(err => {
-          window.googleMapsApiLoaded = false;
-        });
-      }
     } else {
       throw new Error(data ? data.message : "データが空です");
     }
