@@ -155,7 +155,6 @@
   "package.json",
   "scratch/verify_overlay_button.mjs",
   "scripts/audit-master-integrity.py",
-  "scripts/bootstrap_district.js",
   "scripts/build-master-and-mapping.py",
   "scripts/build_template_guide.mjs",
   "scripts/check-provisioning-gate.mjs",
@@ -186,7 +185,6 @@
   "scripts/validate-district-data-gate.mjs",
   "scripts/validate-gas-endpoint-ssot.mjs",
   "scripts/verify-runtime-integrity.mjs",
-  "scripts/verify_happ_detail.mjs",
   "tests/dashboard_verification_gate.mjs",
   "tests/e2e/run_regression.js",
   "tests/e2e/server.js"
