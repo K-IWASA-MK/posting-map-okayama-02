@@ -57,7 +57,7 @@ Flash ➔ MASTER 最終完了報告
    - ④ 対象自治体コード一覧および国勢調査データの配置パス
 3. **境界制御**:
    - 不足がある場合: FlashはMASTERへ定型フォーマットで不足項目を提示し、受領を待つ。
-   - 揃っている場合: Flashは `.agents/plugins/subagent-orchestrator/` の `invoke_subagent(agent_name="deployer", task="...")` ツールを起動し、パイプライン執行を自律委譲する。
+   - 揃っている場合: Flashは `deployer` サブエージェントを起動し、パイプライン執行を委譲する。
 
 ---
 
@@ -115,9 +115,8 @@ Flash ➔ MASTER 最終完了報告
 - **準拠Agent**: [auditor](../../agents/auditor/agent.md)
 - **準拠Skill**: [official-data-confirmation-audit](../../skills/official-data-confirmation-audit/SKILL.md)
 - **Action**:
-  - Deployer は、変更差分および取得した客観的Evidenceを「検品依頼パッケージ」として `invoke_subagent(agent_name="auditor", task="検品依頼パッケージ...")` を呼び出して提出。
-  - Auditor は `.agents/plugins/subagent-orchestrator/hooks.json` により物理的READ ONLY環境で独立セッションとして起動され、5観点で独立査読を実施。
-  - 査読完了後、Auditor は `agentapi send-message` 経由で Deployer / Flash へ合否判定を送信。
+  - Deployer は、変更差分および取得した客観的Evidenceを「検品依頼パッケージ」として `auditor` サブエージェントへ提出。
+  - Auditor が 5観点（地区非依存、スコープ厳守、客観的エビデンス、ゼロ手作業、公式データ確定）で独立査読を実施。
 - **Gate**: Auditor からの PASS 判定を受領。
 
 ---
@@ -126,7 +125,7 @@ Flash ➔ MASTER 最終完了報告
 - **準拠Agent**: [district-deployment-recorder](../../agents/district-deployment-recorder/agent.md)
 - **準拠Skill**: [district-deployment-recording](../../skills/district-deployment-recording/SKILL.md)
 - **Action**:
-  - Deployer は、Auditor PASS ログおよび実施コマンド・差分・証跡を添えて `invoke_subagent(agent_name="district-deployment-recorder", task="記録作成依頼...")` を呼び出す。
+  - Deployer は、Auditor PASS ログおよび実施コマンド・差分・証跡を `district-deployment-recorder` サブエージェントへ引き渡す。
   - Recorder が必須14項目を満たす `.agents/records/record-XXX.md` を作成。
 - **Gate**: 記録ファイルが生成され、Gitステータスに反映されたことを確認。
 
