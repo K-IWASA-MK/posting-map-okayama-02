@@ -15,6 +15,7 @@
   ".agents/rules/core-rules.md",
   ".agents/rules/district-data-transition-rule.md",
   ".agents/rules/district-external-data-governance-rule.md",
+  ".agents/rules/district-pre-copy-rule.md",
   ".agents/rules/legacy-cleanup-rule.md",
   ".agents/rules/security-rule.md",
   ".agents/rules/ui-rule.md",
