@@ -147,5 +147,6 @@
   "scripts/check-scope.mjs",
   ".agents/auditor/evidence-checker.js",
   "active/api/auth/auth.js",
-  ".agents/skills/census-small-area-master/SKILL.md"
+  ".agents/skills/census-small-area-master/SKILL.md",
+  ".agents/rules/district-data-transition-rule.md"
 ]
