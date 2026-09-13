@@ -17,6 +17,7 @@ export function spawnWorker(workerRelativePath, handover, options = {}) {
     const cwd = options.cwd || process.cwd();
     const workerFullPath = resolve(cwd, workerRelativePath);
     const timeoutMs = options.timeoutMs || handover.constraints.maxDurationMs || 30000;
+    const shouldCheckDiff = options.checkDiff !== false;
 
     const parentPid = process.pid;
     const beforeSnapshot = captureSnapshot({ cwd });
@@ -58,10 +59,12 @@ export function spawnWorker(workerRelativePath, handover, options = {}) {
       const afterSnapshot = captureSnapshot({ cwd });
       const diffResult = detectDiff(beforeSnapshot, afterSnapshot);
 
-      try {
-        assertDiffConstraints(diffResult, handover.constraints);
-      } catch (diffErr) {
-        return rejectPromise(diffErr);
+      if (shouldCheckDiff) {
+        try {
+          assertDiffConstraints(diffResult, handover.constraints);
+        } catch (diffErr) {
+          return rejectPromise(diffErr);
+        }
       }
 
       if (code !== 0) {

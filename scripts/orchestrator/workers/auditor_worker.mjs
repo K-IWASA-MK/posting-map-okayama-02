@@ -40,6 +40,12 @@ async function auditTask(handover, workerStartTime) {
   const details = {};
 
   const cwd = process.cwd();
+  const context = handover.context || {};
+  const simulationDelayMs = typeof context.simulationDelayMs === 'number' ? context.simulationDelayMs : 0;
+
+  if (simulationDelayMs > 0) {
+    await new Promise(res => setTimeout(res, simulationDelayMs));
+  }
 
   details.viewpoint1_districtAgnostic = 'PASS';
   evidence.push('District-agnostic principle respected: auditor runs without hardcoded district IDs.');
@@ -85,7 +91,8 @@ async function auditTask(handover, workerStartTime) {
       workerPid: process.pid,
       parentPid: process.ppid,
       workerStartTime: new Date(workerStartTime).toISOString(),
-      workerEndTime: new Date(workerEndTime).toISOString()
+      workerEndTime: new Date(workerEndTime).toISOString(),
+      simulationDelayMs
     },
     issues,
     evidence,

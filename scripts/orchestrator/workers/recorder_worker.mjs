@@ -67,6 +67,12 @@ function validateTargetPath(targetPath) {
 async function recordTask(handover, workerStartTime) {
   const cwd = process.cwd();
   const context = handover.context || {};
+  const simulationDelayMs = typeof context.simulationDelayMs === 'number' ? context.simulationDelayMs : 0;
+
+  if (simulationDelayMs > 0) {
+    await new Promise(res => setTimeout(res, simulationDelayMs));
+  }
+
   const recordFileName = context.recordFileName || (handover.scope && handover.scope[0]);
 
   if (!recordFileName) {
@@ -117,7 +123,8 @@ async function recordTask(handover, workerStartTime) {
       parentPid: process.ppid,
       workerStartTime: new Date(workerStartTime).toISOString(),
       workerEndTime: new Date(workerEndTime).toISOString(),
-      bytesWritten: Buffer.byteLength(markdownContent, 'utf8')
+      bytesWritten: Buffer.byteLength(markdownContent, 'utf8'),
+      simulationDelayMs
     },
     issues: [],
     evidence: [
