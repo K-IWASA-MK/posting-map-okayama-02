@@ -23,6 +23,7 @@ def parse_args():
     parser.add_argument('--raw-dir', default='data/raw_estat_r2', help='Directory containing raw e-Stat shapefiles')
     parser.add_argument('--output', default='scratch/candidate_boundaries.geojson', help='Output GeoJSON path')
     parser.add_argument('--audit-output', default='scratch/phase3_508_audit_table.json', help='Audit table JSON path')
+    parser.add_argument('--city-codes', default=None, help='Comma-separated city codes and names (e.g. "33102:岡山市中区,33103:岡山市東区")')
     return parser.parse_args()
 
 def round_coords(geom_dict, precision=6):
@@ -46,13 +47,25 @@ def main():
         master_rows = list(csv.DictReader(f))
     print(f"[Phase 3] Loaded SSOT address_master: {len(master_rows)} items")
 
-    city_codes = [
-        ('33102', '岡山市中区'),
-        ('33103', '岡山市東区'),
-        ('33104', '岡山市南区'),
-        ('33204', '玉野市'),
-        ('33212', '瀬戸内市')
-    ]
+    if args.city_codes:
+        city_codes = []
+        for pair in args.city_codes.split(','):
+            pair = pair.strip()
+            if not pair:
+                continue
+            if ':' in pair:
+                code, cname = pair.split(':', 1)
+                city_codes.append((code.strip(), cname.strip()))
+            else:
+                city_codes.append((pair, pair))
+    else:
+        city_codes = [
+            ('33102', '岡山市中区'),
+            ('33103', '岡山市東区'),
+            ('33104', '岡山市南区'),
+            ('33204', '玉野市'),
+            ('33212', '瀬戸内市')
+        ]
 
     # 2. Load e-Stat raw shapefiles
     estat_raw_by_city = {}
