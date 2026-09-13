@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "subagent-orchestrator": {
+      "command": "node",
+      "args": [
+        ".agents/plugins/subagent-orchestrator/subagent_server.mjs"
+      ],
+      "env": {}
+    }
+  }
+}
