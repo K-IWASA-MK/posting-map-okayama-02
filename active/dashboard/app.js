@@ -143,7 +143,7 @@ let appStartupTriggered = false;
 let mainAppVisible = false;
 
 function showMainApp() {
-  if (mainAppVisible) return;
+  if (mainAppVisible || window.__contractExpired) return;
 
   const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
   if (!userInfo.last && !userInfo.id) return;
@@ -1080,6 +1080,17 @@ async function fetchSystemSummary(forceRefresh = false) {
   _systemSummaryPromise = (async () => {
     try {
       const res = await callApiPost('getSystemSummary');
+      if (res && (res.code === 'CONTRACT_EXPIRED' || res.contractStatus === 'EXPIRED' || res.isExpired === true)) {
+        window.__contractExpired = true;
+        if (typeof setSyncStatus === 'function') setSyncStatus('offline');
+        const statusEl = $('loading-status');
+        if (statusEl) statusEl.textContent = '接続エラー: 接続できません。';
+        const appEl = $('app');
+        if (appEl) { appEl.classList.add('hidden'); appEl.classList.add('opacity-0'); }
+        const loadingEl = $('loading');
+        if (loadingEl) { loadingEl.classList.remove('hidden'); loadingEl.classList.remove('opacity-0'); }
+        return res;
+      }
       if (res && res.success) {
         updateStats(res);
         return res;

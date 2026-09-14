@@ -61,13 +61,36 @@
 
         const percent = totalPoints > 0 ? Math.round((totalDone / totalPoints) * 100) : 0;
 
+        const contract = (typeof SystemInfoService !== 'undefined' && SystemInfoService.getInstance)
+          ? SystemInfoService.getInstance().getContractStatus()
+          : { status: 'ACTIVE', isExpired: false, endDate: '' };
+
+        if (contract.isExpired) {
+          return {
+            success: false,
+            code: 'CONTRACT_EXPIRED',
+            districtName: districtName,
+            total: totalPoints,
+            done: totalDone,
+            percent: percent,
+            online: false,
+            contractStatus: 'EXPIRED',
+            contractEndDate: contract.endDate,
+            isExpired: true,
+            message: '契約期間が終了しているため利用できません。'
+          };
+        }
+
         return {
           success: true,
           districtName: districtName,
           total: totalPoints,
           done: totalDone,
           percent: percent,
-          online: true
+          online: true,
+          contractStatus: 'ACTIVE',
+          contractEndDate: contract.endDate,
+          isExpired: false
         };
       } catch (err) {
         return {

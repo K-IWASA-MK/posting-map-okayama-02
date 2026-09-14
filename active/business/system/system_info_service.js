@@ -125,6 +125,87 @@
       }
     }
 
+    getContractEndDate(existingSheet) {
+      try {
+        const s = existingSheet || (this.getSS() ? this.getSS().getSheetByName('SYSTEM_INFO') : null);
+        if (!s) return '';
+        const lr = s.getLastRow();
+        if (lr < 2) return '';
+        const data = s.getRange(1, 1, lr, 2).getValues();
+        for (let i = 0; i < data.length; i++) {
+          if (data[i][0] === '契約終了日') {
+            const val = data[i][1];
+            if (val instanceof Date) {
+              if (typeof Utilities !== 'undefined' && typeof Utilities.formatDate === 'function') {
+                return Utilities.formatDate(val, "JST", "yyyy-MM-dd");
+              }
+              const jst = new Date(val.getTime() + (9 * 60 * 60 * 1000));
+              return jst.toISOString().slice(0, 10);
+            }
+            if (val !== undefined && val !== null && String(val).trim() !== '') {
+              return String(val).trim().replace(/\//g, '-');
+            }
+            return '';
+          }
+        }
+      } catch (e) {}
+      return '';
+    }
+
+    setContractEndDate(dateStr) {
+      const ss = this.getSS();
+      let sheet = ss.getSheetByName('SYSTEM_INFO');
+      if (!sheet) sheet = ss.insertSheet('SYSTEM_INFO');
+
+      let cleanDate = '';
+      if (dateStr !== undefined && dateStr !== null) {
+        cleanDate = String(dateStr).trim().replace(/\//g, '-');
+      }
+
+      const lr = sheet.getLastRow();
+      let found = false;
+      if (lr >= 2) {
+        const data = sheet.getRange(1, 1, lr, 2).getValues();
+        for (let i = 0; i < data.length; i++) {
+          if (data[i][0] === '契約終了日') {
+            sheet.getRange(i + 1, 2).setValue(cleanDate);
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) {
+        sheet.appendRow(['契約終了日', cleanDate]);
+      }
+      if (typeof SpreadsheetApp !== 'undefined' && SpreadsheetApp.flush) {
+        SpreadsheetApp.flush();
+      }
+      return { success: true, contractEndDate: cleanDate };
+    }
+
+    getContractStatus(existingSheet, now = new Date()) {
+      const endDateStr = this.getContractEndDate(existingSheet);
+      if (!endDateStr) {
+        return { status: 'ACTIVE', isExpired: false, endDate: '' };
+      }
+
+      let todayStr = '';
+      if (typeof Utilities !== 'undefined' && typeof Utilities.formatDate === 'function') {
+        todayStr = Utilities.formatDate(now, "JST", "yyyy-MM-dd");
+      } else {
+        const jst = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+        todayStr = jst.toISOString().slice(0, 10);
+      }
+
+      const isExpired = todayStr > endDateStr;
+      return {
+        status: isExpired ? 'EXPIRED' : 'ACTIVE',
+        isExpired: isExpired,
+        endDate: endDateStr,
+        today: todayStr
+      };
+    }
+
     syncSystemInfo(options) {
       const opts = options || {};
       const token = opts.provisioningToken;
@@ -152,6 +233,8 @@
         const dashboardUrl = `${baseUrl}/active/manager/`;
         const hAppUrl = `${baseUrl}/`;
 
+        const contractEndDate = opts.contractEndDate !== undefined ? opts.contractEndDate : this.getContractEndDate(sheet);
+
         const values = [
           ['項目', '内容'],
           ['地区コード', districtName],
@@ -163,7 +246,8 @@
           ['LIFF URL', liff.url],
           ['Endpoint URL', hAppUrl],
           ['Manager認証パスワード', managerPassword],
-          ['状態', 'ACTIVE']
+          ['状態', 'ACTIVE'],
+          ['契約終了日', contractEndDate]
         ];
 
         sheet.clear();

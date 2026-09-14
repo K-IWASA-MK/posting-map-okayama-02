@@ -143,7 +143,20 @@ function doGet(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-  } else if (!isReadOnlyAction && !isDashboardAction) {
+  }
+
+  if (typeof SystemInfoService !== 'undefined' && SystemInfoService.getInstance) {
+    const contract = SystemInfoService.getInstance().getContractStatus();
+    if (contract.isExpired) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        code: "CONTRACT_EXPIRED",
+        message: "契約期間が終了しているため利用できません。"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  if (!isReadOnlyAction && !isDashboardAction) {
     const auth = authenticateRequest(params);
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))
@@ -511,7 +524,20 @@ function doPost(e) {
     }
     return ContentService.createTextOutput(JSON.stringify(result))
       .setMimeType(ContentService.MimeType.JSON);
-  } else if (!isReadOnlyAction && !isDashboardAction) {
+  }
+
+  if (typeof SystemInfoService !== 'undefined' && SystemInfoService.getInstance) {
+    const contract = SystemInfoService.getInstance().getContractStatus();
+    if (contract.isExpired) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        code: "CONTRACT_EXPIRED",
+        message: "契約期間が終了しているため利用できません。"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  if (!isReadOnlyAction && !isDashboardAction) {
     const auth = authenticateRequest(postData || {});
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))

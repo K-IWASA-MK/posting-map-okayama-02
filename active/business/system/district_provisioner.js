@@ -377,6 +377,32 @@
         managerPassword = String(Math.floor(100000 + Math.random() * 900000));
       }
 
+      let contractEndDate = opts.contractEndDate || "";
+      if (!contractEndDate && sheet) {
+        try {
+          const lastRow = sheet.getLastRow();
+          if (lastRow > 1) {
+            const data = sheet.getRange(1, 1, lastRow, 2).getValues();
+            for (let i = 0; i < data.length; i++) {
+              if (data[i][0] === "契約終了日" && data[i][1]) {
+                const val = data[i][1];
+                if (val instanceof Date) {
+                  if (typeof Utilities !== 'undefined' && typeof Utilities.formatDate === 'function') {
+                    contractEndDate = Utilities.formatDate(val, "JST", "yyyy-MM-dd");
+                  } else {
+                    const jst = new Date(val.getTime() + (9 * 60 * 60 * 1000));
+                    contractEndDate = jst.toISOString().slice(0, 10);
+                  }
+                } else {
+                  contractEndDate = String(val).trim().replace(/\//g, '-');
+                }
+                break;
+              }
+            }
+          }
+        } catch (e) {}
+      }
+
       const headers = [["項目", "内容"]];
       const rows = [
         ["地区コード", districtName],
@@ -388,7 +414,8 @@
         ["LIFF URL", liffUrl],
         ["Endpoint URL", hAppUrl],
         ["Manager認証パスワード", managerPassword],
-        ["状態", "ACTIVE"]
+        ["状態", "ACTIVE"],
+        ["契約終了日", contractEndDate]
       ];
 
       const currentLr = sheet.getLastRow();

@@ -38,7 +38,7 @@ function onOpen() {
     )
     .addSeparator()
     .addItem("⏰ 自動集計（1時間ごと）を有効化", "setupHourlyRefreshTrigger")
-    .addItem("🛑 契約終了を予約（今月末で停止）", "toggleContractEndReservation")
+    .addItem("📅 契約・利用終了日を設定", "setContractEndDateFromUI")
     .addSeparator()
     .addItem("🎨 全シートを「プロ仕様」に一斉整形", "formatAllSheets")
     .addItem("🔧 名簿シートを初期化・復旧する", "setupRosterSheet")
@@ -568,37 +568,75 @@ function isNotAdmin() {
   return false;
 }
 
-/**
- * 契約終了の月末自動停止の予約・解除を切り替える
- */
-function toggleContractEndReservation() {
+function setContractEndDateFromUI() {
   const ui = SpreadsheetApp.getUi();
-  const props = PropertiesService.getScriptProperties();
-  const isScheduled = props.getProperty("DISABLE_ROLLOVER") === "true";
+  const sysInfoService = typeof SystemInfoService !== 'undefined' && SystemInfoService.getInstance
+    ? SystemInfoService.getInstance()
+    : null;
 
-  if (!isScheduled) {
-    // 予約されていない場合 ➔ 予約する
-    const confirm = ui.alert(
-      "🛑 契約終了の予約 (今月末で停止)",
-      "今月末（翌月1日の深夜）をもって本システムのご契約を終了し、自動停止しますか？\n\n※今月末までは通常通りエリア地図・リストを利用可能です。月末の自動更新のタイミングでデータが完全削除され、システムが停止します。",
-      ui.ButtonSet.YES_NO
-    );
-    if (confirm === ui.Button.YES) {
-      props.setProperty("DISABLE_ROLLOVER", "true");
-      ui.alert("契約終了の予約を完了しました。\n今月末まで通常通りご利用いただけます。");
-    }
-  } else {
-    // すでに予約されている場合 ➔ キャンセルする
-    const confirm = ui.alert(
-      "🔄 契約終了予約のキャンセル (サブスク継続)",
-      "すでに今月末での契約終了（自動停止）が予約されています。\n\nこの予約をキャンセルし、来月以降も自動ローテーション（契約継続）しますか？",
-      ui.ButtonSet.YES_NO
-    );
-    if (confirm === ui.Button.YES) {
-      props.deleteProperty("DISABLE_ROLLOVER");
-      ui.alert("契約終了予約をキャンセルしました。\n来月以降も自動的に今月データがリセットされ、新規シートが作成されます。");
-    }
+  let currentEndDate = '';
+  if (sysInfoService) {
+    currentEndDate = sysInfoService.getContractEndDate();
   }
+
+  const currentDisplay = currentEndDate
+    ? `【現在の設定】: ${currentEndDate} まで利用可能`
+    : "【現在の設定】: 期限なし（通常利用中）";
+
+  const response = ui.prompt(
+    "📅 契約・利用終了日の設定",
+    `${currentDisplay}\n\n本システムの利用終了日を半角数字『YYYY-MM-DD』形式で入力してください。\n（例: 選挙当日の 2026-10-12）\n\n※設定した日付の当日 23:59:59 (JST) まで通常通りご利用いただけます。\n※空欄のままOKを押すと、期限設定を解除（無期限利用）します。\n※終了後もスプレッドシートのデータや過去の記録は安全に保全されます。`,
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  const inputText = response.getResponseText().trim();
+
+  if (inputText === "") {
+    if (sysInfoService) {
+      sysInfoService.setContractEndDate("");
+    }
+    PropertiesService.getScriptProperties().deleteProperty("DISABLE_ROLLOVER");
+    ui.alert("利用終了日の設定を解除しました。\n期限なし（通常利用）を継続します。");
+    return;
+  }
+
+  const match = inputText.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (!match) {
+    ui.alert("エラー: 日付の形式が正しくありません。\n『2026-10-12』のように YYYY-MM-DD 形式で入力してください。");
+    return;
+  }
+
+  const y = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const d = parseInt(match[3], 10);
+
+  if (m < 1 || m > 12 || d < 1 || d > 31) {
+    ui.alert("エラー: 有効なカレンダー日付を入力してください。");
+    return;
+  }
+
+  const testDate = new Date(y, m - 1, d);
+  if (testDate.getFullYear() !== y || testDate.getMonth() !== (m - 1) || testDate.getDate() !== d) {
+    ui.alert("エラー: カレンダー上に存在しない日付です。");
+    return;
+  }
+
+  const normalizedDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+  if (sysInfoService) {
+    sysInfoService.setContractEndDate(normalizedDate);
+  }
+  PropertiesService.getScriptProperties().deleteProperty("DISABLE_ROLLOVER");
+
+  ui.alert(`契約・利用終了日を「${normalizedDate}」に設定しました。\n${normalizedDate} 23:59:59 (JST) まで通常通りご利用いただけます。`);
+}
+
+function toggleContractEndReservation() {
+  setContractEndDateFromUI();
 }
 
 

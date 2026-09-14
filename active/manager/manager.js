@@ -145,14 +145,18 @@ async function checkManagerAuth() {
   } catch (e) {}
 
   if (isLocallyAuthed) {
-    callApiPost('getSystemSummary').then(summary => {
+    try {
+      const summary = await callApiPost('getSystemSummary');
+      if (summary && (summary.code === 'CONTRACT_EXPIRED' || summary.contractStatus === 'EXPIRED' || summary.isExpired === true)) {
+        return false;
+      }
       if (summary && summary.districtName) {
         DashboardState.districtCode = summary.districtName;
         DashboardState.summary = summary;
       }
-    }).catch(err => {
+    } catch (err) {
       console.warn('[Background SystemSummary Error]', err);
-    });
+    }
     return true;
   }
 
@@ -162,6 +166,9 @@ async function checkManagerAuth() {
 
   try {
     const summary = await callApiPost('getSystemSummary');
+    if (summary && (summary.code === 'CONTRACT_EXPIRED' || summary.contractStatus === 'EXPIRED' || summary.isExpired === true)) {
+      return false;
+    }
     if (summary && summary.districtName) {
       DashboardState.districtCode = summary.districtName;
       DashboardState.summary = summary;
@@ -670,6 +677,14 @@ async function syncDashboardData() {
       callApiPost('getTransferRequests').catch(e => ({ success: false, error: e.message })),
       callApiPost('getLatestDistribution', { limit: 20 }).catch(e => ({ success: false, error: e.message }))
     ]);
+
+    if (summaryRes && (summaryRes.code === 'CONTRACT_EXPIRED' || summaryRes.contractStatus === 'EXPIRED' || summaryRes.isExpired === true)) {
+      _isDashboardInitialized = false;
+      showManagerPinGate();
+      const errorEl = document.getElementById('manager-pin-error');
+      if (errorEl) errorEl.textContent = '契約期間が終了しているため利用できません。';
+      return;
+    }
 
     const isSummaryOk = summaryRes && summaryRes.success;
     const isStockOk = stockRes && stockRes.success;
