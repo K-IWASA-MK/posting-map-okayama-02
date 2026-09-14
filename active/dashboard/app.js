@@ -720,108 +720,74 @@ async function switchPage(id, force = false) {
 
   // 2. ページに応じた処理・レンダリングを行う
   if (id === 'settings') renderSettings();
-  if (id === 'ranking') {
-    const container = $('ranking-list');
-    if (!_rankingFetched) {
-      if (container) {
-        container.innerHTML = `
-          <div style="border: 1px solid rgba(255,255,255,0.04);" class="premium-glass p-8 flex flex-col items-center justify-center text-center gap-3">
-            <div class="w-8 h-8 rounded-full border-2 border-[#2563eb]/40 border-t-[#2563eb] animate-spin"></div>
-            <p class="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Loading Leaderboard...</p>
-          </div>`;
-      }
-      const p = window.activeRankingPromise || callApiPost('getRanking');
-      p.then(data => {
-        if (data && data.success) {
-          rankingData = data.ranking || [];
-          _rankingFetched = true;
-        }
-        if (typeof renderRanking === 'function') renderRanking();
-      }).catch(() => {
-        if (typeof renderRanking === 'function') renderRanking();
-      });
-    } else {
-      if (typeof renderRanking === 'function') renderRanking();
-    }
+  if (id === 'ranking') initRankingPage();
+  if (id === 'storage-register') initStorageRegisterPage();
+  if (id === 'storage-list') initStorageListPage();
+
+  if (id === 'bulletin') {
+    if (typeof fetchBulletinPosts === 'function') fetchBulletinPosts();
   }
 
-  if (id === 'storage-register') {
-    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
-    const staffId = userInfo.id || '';
-    const staffName = `${userInfo.last || ''} ${userInfo.first || ''}`.trim();
-    const idEl = $('storage-register-staff-id');
-    const nameEl = $('storage-register-staff-name');
+  updateBottomNavVisibility();
 
-    if (idEl) {
-      if (staffId) {
-        idEl.textContent = 'ID: ' + staffId;
-        idEl.style.color = 'inherit';
-        idEl.style.cursor = 'default';
-        idEl.onclick = null;
-      } else if (isRegistering) {
-        idEl.textContent = 'ID: 登録中...';
-        idEl.style.color = 'inherit';
-        idEl.style.cursor = 'default';
-        idEl.onclick = null;
-      } else if (registrationError) {
-        idEl.textContent = 'ID: 登録失敗 (タップして再試行)';
-        idEl.style.color = '#ef4444';
-        idEl.style.cursor = 'pointer';
-        idEl.onclick = async () => {
-          try {
-            idEl.textContent = 'ID: 再登録中...';
-            idEl.style.color = 'inherit';
-            const profile = await liff.getProfile();
-            triggerBackgroundRegistration(profile);
-          } catch(e) {
-            idEl.textContent = 'ID: 登録失敗 (タップして再試行)';
-            idEl.style.color = '#ef4444';
-          }
-        };
+  const contentEl = $('content');
+  if (contentEl) {
+    contentEl.scrollTop = 0;
+    contentEl.style.overflowY = 'auto';
+  }
+
+  target.style.opacity = '0';
+  target.style.transform = 'translateY(12px)';
+  target.classList.remove('hidden');
+
+  target.offsetHeight;
+
+  target.style.opacity = '1';
+  target.style.transform = 'translateY(0)';
+
+  const navContainer = $('bottom-nav');
+  if (navContainer && typeof renderBottomNavigation === 'function') {
+    navContainer.innerHTML = renderBottomNavigation(id);
+  }
+
+  if (id === 'areas' && window.currentCityDetailAreaName) {
+    setTimeout(() => {
+      const cardEl = document.getElementById(`area-card-${window.currentCityDetailAreaName}`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ block: 'center', behavior: 'auto' });
       } else {
-        idEl.textContent = 'ID: ---';
-        idEl.style.color = 'inherit';
-        idEl.style.cursor = 'default';
-        idEl.onclick = null;
+        $('content').scrollTo(0, scrollPositions[id] || 0);
       }
-    }
-    if (nameEl) nameEl.textContent = staffName || '---';
-
-    const countInput = $('storage-register-count');
-
-    // Dynamic population using SSOT tier1Cache
-    updateStorageLocationDropdown();
-
-    // Auto-populate latest registered stock for logged-in staff
-    if (staffId && countInput) {
-      callApiPost('getFlyerStock').then(data => {
-        if (data && data.success && Array.isArray(data.stocks)) {
-          _stockData = data.stocks;
-          _stockFetched = true;
-          const myStock = _stockData.find(s => String(s.staffId) === String(staffId));
-          if (myStock) {
-            const rawCount = parseInt(myStock.count, 10);
-            countInput.value = isNaN(rawCount) ? '' : String(rawCount);
-            const locSelect = $('storage-register-location');
-            if (locSelect && myStock.location) {
-              locSelect.value = myStock.location;
-              updateStorageLocationDisplayText();
-            }
-          }
-          updateStorageCountDisplay();
-          updateStorageRegisterButtonText();
-        }
-      }).catch(err => {
-        console.warn('Failed to fetch staff stock on entry:', err);
-        updateStorageCountDisplay();
-        updateStorageRegisterButtonText();
-      });
-    }
-
-    setupStorageRegisterInputFormatter(countInput);
-    updateStorageCountDisplay();
-    updateStorageRegisterButtonText();
+    }, 50);
+  } else {
+    $('content').scrollTo(0, scrollPositions[id] || 0);
   }
+}
+
+function initRankingPage() {
+  const container = $('ranking-list');
+  if (!_rankingFetched) {
+    if (container) {
+      container.innerHTML = `
+        <div style="border: 1px solid rgba(255,255,255,0.04);" class="premium-glass p-8 flex flex-col items-center justify-center text-center gap-3">
+          <div class="w-8 h-8 rounded-full border-2 border-[#2563eb]/40 border-t-[#2563eb] animate-spin"></div>
+          <p class="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Loading Leaderboard...</p>
+        </div>`;
+    }
+    const p = window.activeRankingPromise || callApiPost('getRanking');
+    p.then(data => {
+      if (data && data.success) {
+        rankingData = data.ranking || [];
+        _rankingFetched = true;
+      }
+      if (typeof renderRanking === 'function') renderRanking();
+    }).catch(() => {
+      if (typeof renderRanking === 'function') renderRanking();
+    });
+  } else {
+    if (typeof renderRanking === 'function') renderRanking();
+  }
+}
 
 function updateStorageCountDisplay() {
   const countInput = $('storage-register-count');
@@ -959,87 +925,118 @@ window.updateStorageLocationDropdown = function updateStorageLocationDropdown(ov
   updateStorageLocationDisplayText();
 };
 
-  if (id === 'storage-list') {
-    const listContainer = $('storage-list-container');
+function initStorageRegisterPage() {
+  const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+  const staffId = userInfo.id || '';
+  const staffName = `${userInfo.last || ''} ${userInfo.first || ''}`.trim();
+  const idEl = $('storage-register-staff-id');
+  const nameEl = $('storage-register-staff-name');
 
-    if (!_stockFetched) {
-      if (listContainer) {
-        listContainer.innerHTML = `
-          <div style="border: 1px solid rgba(255,255,255,0.04);" class="premium-glass p-8 flex flex-col items-center justify-center text-center gap-3">
-            <div class="w-8 h-8 rounded-full border-2 border-[#2563eb]/40 border-t-[#2563eb] animate-spin"></div>
-            <p class="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Loading Inventory...</p>
-          </div>`;
-      }
-      callApiPost('getFlyerStock').then(data => {
-        if (data && data.success) {
-          _stockData = data.stocks || [];
-          _stockFetched = true;
-          if (typeof renderStorageList === 'function') renderStorageList(_stockData);
-        } else {
-          if (listContainer) {
-            listContainer.innerHTML = `
-              <div style="border: 1px solid rgba(255,255,255,0.04);" class="premium-glass p-8 flex flex-col items-center justify-center text-center gap-3">
-                <span class="text-2xl">⚠️</span>
-                <p class="text-sm font-black text-white/60">データ取得に失敗しました</p>
-              </div>`;
+  if (idEl) {
+    if (staffId) {
+      idEl.textContent = 'ID: ' + staffId;
+      idEl.style.color = 'inherit';
+      idEl.style.cursor = 'default';
+      idEl.onclick = null;
+    } else if (isRegistering) {
+      idEl.textContent = 'ID: 登録中...';
+      idEl.style.color = 'inherit';
+      idEl.style.cursor = 'default';
+      idEl.onclick = null;
+    } else if (registrationError) {
+      idEl.textContent = 'ID: 登録失敗 (タップして再試行)';
+      idEl.style.color = '#ef4444';
+      idEl.style.cursor = 'pointer';
+      idEl.onclick = async () => {
+        try {
+          idEl.textContent = 'ID: 再登録中...';
+          idEl.style.color = 'inherit';
+          const profile = await liff.getProfile();
+          triggerBackgroundRegistration(profile);
+        } catch(e) {
+          idEl.textContent = 'ID: 登録失敗 (タップして再試行)';
+          idEl.style.color = '#ef4444';
+        }
+      };
+    } else {
+      idEl.textContent = 'ID: ---';
+      idEl.style.color = 'inherit';
+      idEl.style.cursor = 'default';
+      idEl.onclick = null;
+    }
+  }
+  if (nameEl) nameEl.textContent = staffName || '---';
+
+  const countInput = $('storage-register-count');
+
+  updateStorageLocationDropdown();
+
+  if (staffId && countInput) {
+    callApiPost('getFlyerStock').then(data => {
+      if (data && data.success && Array.isArray(data.stocks)) {
+        _stockData = data.stocks;
+        _stockFetched = true;
+        const myStock = _stockData.find(s => String(s.staffId) === String(staffId));
+        if (myStock) {
+          const rawCount = parseInt(myStock.count, 10);
+          countInput.value = isNaN(rawCount) ? '' : String(rawCount);
+          const locSelect = $('storage-register-location');
+          if (locSelect && myStock.location) {
+            locSelect.value = myStock.location;
+            updateStorageLocationDisplayText();
           }
         }
-      }).catch(err => {
+        updateStorageCountDisplay();
+        updateStorageRegisterButtonText();
+      }
+    }).catch(err => {
+      console.warn('Failed to fetch staff stock on entry:', err);
+      updateStorageCountDisplay();
+      updateStorageRegisterButtonText();
+    });
+  }
+
+  setupStorageRegisterInputFormatter(countInput);
+  updateStorageCountDisplay();
+  updateStorageRegisterButtonText();
+}
+
+function initStorageListPage() {
+  const listContainer = $('storage-list-container');
+
+  if (!_stockFetched) {
+    if (listContainer) {
+      listContainer.innerHTML = `
+        <div style="border: 1px solid rgba(255,255,255,0.04);" class="premium-glass p-8 flex flex-col items-center justify-center text-center gap-3">
+          <div class="w-8 h-8 rounded-full border-2 border-[#2563eb]/40 border-t-[#2563eb] animate-spin"></div>
+          <p class="text-[10px] font-black text-white/40 uppercase tracking-[0.3em]">Loading Inventory...</p>
+        </div>`;
+    }
+    callApiPost('getFlyerStock').then(data => {
+      if (data && data.success) {
+        _stockData = data.stocks || [];
+        _stockFetched = true;
+        if (typeof renderStorageList === 'function') renderStorageList(_stockData);
+      } else {
         if (listContainer) {
           listContainer.innerHTML = `
             <div style="border: 1px solid rgba(255,255,255,0.04);" class="premium-glass p-8 flex flex-col items-center justify-center text-center gap-3">
               <span class="text-2xl">⚠️</span>
-              <p class="text-sm font-black text-white/60">エラーが発生しました</p>
+              <p class="text-sm font-black text-white/60">データ取得に失敗しました</p>
             </div>`;
         }
-      });
-    } else {
-      if (typeof renderStorageList === 'function') renderStorageList(_stockData);
-    }
-  }
-
-  if (id === 'bulletin') {
-    if (typeof fetchBulletinPosts === 'function') fetchBulletinPosts();
-  }
-
-  updateBottomNavVisibility();
-
-  const contentEl = $('content');
-  if (contentEl) {
-    contentEl.scrollTop = 0;
-    contentEl.style.overflowY = 'auto';
-  }
-
-  // 4. 次のページを少し下から準備してフェードイン
-  target.style.opacity = '0';
-  target.style.transform = 'translateY(12px)';
-  target.classList.remove('hidden');
-
-  // リフローを強制してアニメーションを適用
-  target.offsetHeight;
-
-  target.style.opacity = '1';
-  target.style.transform = 'translateY(0)';
-
-
-  // 下ナビのタブのアクティブ状態の不透明度とカラーを調整
-  const navContainer = $('bottom-nav');
-  if (navContainer && typeof renderBottomNavigation === 'function') {
-    navContainer.innerHTML = renderBottomNavigation(id);
-  }
-
-  // スクロール位置の復元
-  if (id === 'areas' && window.currentCityDetailAreaName) {
-    setTimeout(() => {
-      const cardEl = document.getElementById(`area-card-${window.currentCityDetailAreaName}`);
-      if (cardEl) {
-        cardEl.scrollIntoView({ block: 'center', behavior: 'auto' });
-      } else {
-        $('content').scrollTo(0, scrollPositions[id] || 0);
       }
-    }, 50);
+    }).catch(err => {
+      if (listContainer) {
+        listContainer.innerHTML = `
+          <div style="border: 1px solid rgba(255,255,255,0.04);" class="premium-glass p-8 flex flex-col items-center justify-center text-center gap-3">
+            <span class="text-2xl">⚠️</span>
+            <p class="text-sm font-black text-white/60">エラーが発生しました</p>
+          </div>`;
+      }
+    });
   } else {
-    $('content').scrollTo(0, scrollPositions[id] || 0);
+    if (typeof renderStorageList === 'function') renderStorageList(_stockData);
   }
 }
 
