@@ -671,98 +671,13 @@ window.addEventListener('offline', () => {
   setSyncStatus('offline');
 });
 
-async function switchPage(id, force = false) {
-  const pages = document.querySelectorAll('.page');
-  const targetId = id === 'settings' ? 'page-settings' :
-                   id === 'ranking' ? 'page-ranking' :
-                   id === 'storage-register' ? 'page-storage-register' :
-                   id === 'storage-list' ? 'page-storage-list' :
-                   id === 'bulletin' ? 'page-bulletin' :
-                   'page-areas';
-  const target = $(targetId);
-  if (!target) return;
-
-  // すでにアクティブなら多重遷移を防ぐためスキップ
-  if (!force && !target.classList.contains('hidden') && target.style.opacity === '1') return;
-
-  // ページ切り替え時に第1層MAP以外の画面であれば is-map-view を除去
-  const mapContentEl = $('content');
-  if (mapContentEl) {
-    if (id === 'areas' && (typeof currentCity === 'undefined' || currentCity === null)) {
-      mapContentEl.classList.add('is-map-view');
-    } else {
-      mapContentEl.classList.remove('is-map-view');
-    }
-  }
-
-  // エリア関連のページ切り替えであれば直前のページタイプを記憶
-  if (id === 'areas') {
-    lastAreaSubPage = id;
-  }
-
-  // 1. 現在表示されているページを上にスライドさせながらフェードアウト
-  const activePage = Array.from(pages).find(p => !p.classList.contains('hidden'));
-  if (activePage) {
-    const activeId = pageIdMap[activePage.id];
-    if (activeId) {
-      scrollPositions[activeId] = $('content').scrollTop;
-    }
-    activePage.style.opacity = '0';
-    activePage.style.transform = 'translateY(-12px)';
-    await new Promise(r => setTimeout(r, 200)); // アニメーション時間分待つ
-    activePage.classList.add('hidden');
-  } else {
-    pages.forEach(p => {
-      p.classList.add('hidden');
-      p.style.opacity = '0';
-    });
-  }
-
-  // 2. ページに応じた処理・レンダリングを行う
+window.onPageEnter = function(id) {
   if (id === 'settings') renderSettings();
   if (id === 'ranking') initRankingPage();
   if (id === 'storage-register') initStorageRegisterPage();
   if (id === 'storage-list') initStorageListPage();
-
-  if (id === 'bulletin') {
-    if (typeof fetchBulletinPosts === 'function') fetchBulletinPosts();
-  }
-
-  updateBottomNavVisibility();
-
-  const contentEl = $('content');
-  if (contentEl) {
-    contentEl.scrollTop = 0;
-    contentEl.style.overflowY = 'auto';
-  }
-
-  target.style.opacity = '0';
-  target.style.transform = 'translateY(12px)';
-  target.classList.remove('hidden');
-
-  target.offsetHeight;
-
-  target.style.opacity = '1';
-  target.style.transform = 'translateY(0)';
-
-  const navContainer = $('bottom-nav');
-  if (navContainer && typeof renderBottomNavigation === 'function') {
-    navContainer.innerHTML = renderBottomNavigation(id);
-  }
-
-  if (id === 'areas' && window.currentCityDetailAreaName) {
-    setTimeout(() => {
-      const cardEl = document.getElementById(`area-card-${window.currentCityDetailAreaName}`);
-      if (cardEl) {
-        cardEl.scrollIntoView({ block: 'center', behavior: 'auto' });
-      } else {
-        $('content').scrollTo(0, scrollPositions[id] || 0);
-      }
-    }, 50);
-  } else {
-    $('content').scrollTo(0, scrollPositions[id] || 0);
-  }
-}
+  if (id === 'bulletin' && typeof fetchBulletinPosts === 'function') fetchBulletinPosts();
+};
 
 function initRankingPage() {
   const container = $('ranking-list');
