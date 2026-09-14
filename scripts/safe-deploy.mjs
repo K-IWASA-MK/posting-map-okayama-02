@@ -37,6 +37,12 @@ async function main() {
   console.log('🚀 GAS PRODUCTION DEPLOYMENT & VERIFICATION GATE');
   console.log('====================================================');
 
+  const uncommitted = execSync('git status --porcelain', { encoding: 'utf8' }).trim();
+  if (uncommitted.length > 0) {
+    console.error('\n🛑 [Hard Stop] Working tree is dirty. Deploy requires a clean working tree.\n' + uncommitted);
+    process.exit(1);
+  }
+  runStep('Preflight Governance Gate', 'npm run audit:gate');
   // Step 1: Preflight SSOT Check
   runStep('Step 1: Preflight SSOT Check', 'npm run check:ssot');
 
