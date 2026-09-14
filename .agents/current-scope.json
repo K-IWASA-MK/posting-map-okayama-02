@@ -1,6 +1,3 @@
 [
-  ".agents/current-scope.json",
-  ".agents/workflows/development/workflow.md",
-  "AGENTS.md",
-  "scripts/safe-deploy.mjs"
+  "active/dashboard/v2_ui.js"
 ]
