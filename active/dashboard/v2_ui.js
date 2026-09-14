@@ -213,14 +213,14 @@ function createRichMenuForHApp() {
     ui.alert("エラー: SYSTEM_INFO に HアプリURL が設定されていません。");
     return;
   }
-  const imageUrl = hAppUrl.replace(/\/+$/, '') + "/assets/richmenu_default.png";
+  const imageUrl = hAppUrl.replace(/\/+$/, '') + "/assets/richmenu_default.jpg";
   try {
     const imageBlob = UrlFetchApp.fetch(imageUrl).getBlob();
     const uploadRes = UrlFetchApp.fetch("https://api-data.line.me/v2/bot/richmenu/" + richMenuId + "/content", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + token,
-        "Content-Type": "image/png"
+        "Content-Type": "image/jpeg"
       },
       payload: imageBlob.getBytes(),
       muteHttpExceptions: true
