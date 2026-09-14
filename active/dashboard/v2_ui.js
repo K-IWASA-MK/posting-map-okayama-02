@@ -18,7 +18,13 @@ function onOpen() {
       PropertiesService.getScriptProperties().setProperty("SPREADSHEET_ID", ss.getId());
     }
   } catch (e) {
-    // エラーは無視
+  }
+
+  try {
+    if (typeof SystemInfoService !== 'undefined' && SystemInfoService.getInstance) {
+      SystemInfoService.getInstance().ensureContractEndDateRow();
+    }
+  } catch (e) {
   }
 
   const ui = SpreadsheetApp.getUi();

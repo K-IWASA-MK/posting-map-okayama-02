@@ -139,4 +139,18 @@ const apiCode = fs.readFileSync('active/api/v2_api.js', 'utf8');
 assert.strictEqual(apiCode.includes('CONTRACT_EXPIRED'), true, 'v2_api.js に CONTRACT_EXPIRED 遮断ゲートが存在すること');
 console.log("  ✅ API共通入口での一括遮断ゲート確認 PASS");
 
+console.log("\n▶ [Test 6] SYSTEM_INFO 自動項目確保 (ensureContractEndDateRow) 検証");
+mockSheet.data = [
+  ['項目', '内容'],
+  ['地区コード', 'OKAYAMA-02'],
+  ['状態', 'ACTIVE']
+];
+service.ensureContractEndDateRow(mockSheet);
+const hasContractRow = mockSheet.data.some(row => row[0] === '契約終了日');
+assert.strictEqual(hasContractRow, true, '契約終了日行が存在しない場合、自動追加されること');
+service.ensureContractEndDateRow(mockSheet);
+const contractRowCount = mockSheet.data.filter(row => row[0] === '契約終了日').length;
+assert.strictEqual(contractRowCount, 1, '既存の場合は重複して追加されないこと');
+console.log("  ✅ SYSTEM_INFO「契約終了日」自動確保・重複防止 PASS");
+
 console.log("\n🎉 すべての契約終了日アクセスコントロール検証が PASS しました！");

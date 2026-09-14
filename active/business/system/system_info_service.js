@@ -152,6 +152,25 @@
       return '';
     }
 
+    ensureContractEndDateRow(existingSheet) {
+      try {
+        const s = existingSheet || (this.getSS() ? this.getSS().getSheetByName('SYSTEM_INFO') : null);
+        if (!s) return;
+        const lr = s.getLastRow();
+        if (lr < 1) return;
+        const data = s.getRange(1, 1, lr, 1).getValues();
+        for (let i = 0; i < data.length; i++) {
+          if (data[i][0] === '契約終了日') {
+            return;
+          }
+        }
+        s.appendRow(['契約終了日', '']);
+        if (typeof SpreadsheetApp !== 'undefined' && SpreadsheetApp.flush) {
+          SpreadsheetApp.flush();
+        }
+      } catch (e) {}
+    }
+
     setContractEndDate(dateStr) {
       const ss = this.getSS();
       let sheet = ss.getSheetByName('SYSTEM_INFO');
