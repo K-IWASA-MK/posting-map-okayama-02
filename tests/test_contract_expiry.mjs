@@ -142,7 +142,7 @@ console.log("  ✅ API共通入口での一括遮断ゲート確認 PASS");
 console.log("\n▶ [Test 6] SYSTEM_INFO 自動項目確保 (ensureContractEndDateRow) 検証");
 mockSheet.data = [
   ['項目', '内容'],
-  ['地区コード', 'OKAYAMA-02'],
+  ['地区コード', 'MOCK-DISTRICT-01'],
   ['状態', 'ACTIVE']
 ];
 service.ensureContractEndDateRow(mockSheet);
