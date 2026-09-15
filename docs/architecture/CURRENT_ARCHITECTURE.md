@@ -110,6 +110,24 @@ AI社員および開発者は、すべての設計・改修・検証・新地区
 > **注記（外部データ生成ツールについて）**:  
 > 国勢調査データ（e-Stat Shapefile）から上記マスターを生成するETLツールは、実行エンジン（`active/`）に含めず、データ調達用の独立ツール（`scripts/` 等）として分離管理する。
 
+### 地区固有データとレガシーパスの技術的負債・移行決定 (`election_history.json`)
+
+衆院選・参院選投票率データ（`election_history.json`）の配置・参照方式および移行判定については、以下の通り正式決定されている：
+
+1. **地区固有データとしての位置づけ**:
+   - `election_history` は選挙区や自治体に依存する **「地区固有データ」** である（本来 `data/` 配下に集約されるべき性質のデータ）。
+2. **現世代Engineにおける技術的負債**:
+   - 現行の第1世代Universal Engineでは、Dashboard（`active/manager/manager.js`）が legacy path である `/docs/election_history.json` をハードコードして直接 fetch している。
+3. **検討された方式の評価と最終判定**:
+   - **案A（symlink互換ブリッジ: `docs/election_history.json -> ../data/election_history.json`）: 【REJECT / 不適合】**  
+     新地区展開（COPY）シミュレーションにおいて、OS・ファイルシステム・Git・ZIP解凍環境によるシンボリックリンク破壊リスクや、GitHub Pagesにおける実証不適合（404エラー）が確認されたため採用不可と判定。
+   - **案D（ミラー同期: ビルド時またはデプロイ時のスクリプト二重生成）: 【不採用】**  
+     SSOT（信頼できる唯一の情報源）の二重化および同期漏れリスクを招くため採用しない。
+   - **案E（現状維持）: 【今回の採用方針】**  
+     現世代Universal Engine（`active/` 配下54ファイルのSHA-256完全固定・0バイト改変維持）を厳格に死守するため、現在の `docs/election_history.json` 配置および既存のruntime参照をそのまま維持する。
+   - **案B（Universal Engine正式改修）: 【次回Engine改訂時の根本解決策】**  
+     次期Universal Engine改訂時において、`fetchStaticDataFile('election_history.json')` 等の汎用動的パス解決基盤を `active/` 側に正式導入し、`data/election_history.json` への正式移行を実施する。
+
 ---
 
 ## 4. 外部リソースとデプロイメントメタデータ
