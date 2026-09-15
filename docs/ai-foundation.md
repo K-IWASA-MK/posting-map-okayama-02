@@ -40,4 +40,4 @@ MASTERから「次に<地区コード>を作成して」「新地区を展開し
 - **Skills**: `.agents/skills/`（専門業務能力・実行プロトコル）。
 - **Workflows**: `.agents/workflows/` (標準作業手順)。
 - **Records**: `.agents/records/`（客観的証跡ログ、Auditor査読記録）。
-- **Docs**: `docs/`（設計思想、アーキテクチャ、マニュアル）。
+- **Docs**: `docs/`（現行アーキテクチャ定義 [docs/architecture/CURRENT_ARCHITECTURE.md](architecture/CURRENT_ARCHITECTURE.md)、設計思想、マニュアル）。

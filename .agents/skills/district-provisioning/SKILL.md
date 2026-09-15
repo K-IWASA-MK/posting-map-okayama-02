@@ -152,14 +152,15 @@ description: 新地区の初期展開、GAS生成、デプロイ、スプレッ�
 ### Phase 4: Client Synchronization Protocol（フロントエンド自動結合）
 * **Action**:
   - `deployment.json` に新 Web App URL およびリソース情報を記録。
-  - `npm run sync:config` を実行し、`active/dashboard/config.js` を SSOT から自動生成。
-  - `npm run check:ssot` を実行し、エンドポイントの整合性を検証。
+  - `npm run sync:config` を実行し、`data/config.js` を SSOT から自動生成（`active/` 配下は完全不変・0変更を維持）。
+  - `npm run check:ssot` を実行し、エンドポイントの整合性を検証（`active/` 内に旧 `config.js` が存在しないことも検証）。
   - 読み取り専用API（`getSystemSummary`, `getDeviceStatus`, `getTier1`）を実行して接続を検証。
 * **Assertion / Evidence**:
-  - `sync:config` 成功ログ、`check:ssot` PASS ログ、読み取りAPIの正常応答（200 OK）。
+  - `sync:config` 成功ログ、`check:ssot` PASS ログ、読み取りAPIの正常応答（200 OK）、`git diff active/` が完全 0 バイトであること。
 * **Hard Stop**:
-  - SSOT 不一致、古いエンドポイントの残存、APIエラー時は即時停止。
+  - SSOT 不一致、古いエンドポイントの残存、APIエラー、`active/` 配下に差分が発生した場合は即時停止。
 * **Prohibition**:
+  - `active/` 配下のファイル（HTML/JS/CSS）へ直接設定ファイルを出力・変更することは絶対禁止。
   - フロントエンドコード（`app.js`, `manager.js` 等）に地区固有値を直接ハードコードすることは禁止。
   - 接続テストのために不要な業務データ（配布実績、名簿等）の書き込み（Write）を行うことは絶対禁止。
 

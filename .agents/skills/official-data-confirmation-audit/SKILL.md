@@ -118,13 +118,13 @@ description: POSTING MAP公式データ確定監査プロトコル。公式一�
   4. 前地区の選挙データ残骸が 0 件であること。
 
 ### Gate 3: Hアプリデータ層確定審査 (Field App Gate)
-- **対象**: GAS本番環境、スプレッドシート、`deployment.json`、`active/dashboard/config.js`
+- **対象**: GAS本番環境、スプレッドシート、`deployment.json`、`data/config.js`（`active/` 内は完全無改変）
 - **原本**: スプレッドシート名（地区名SSOT） ＋ `data/address_master.csv`
 - **PASS条件**:
   1. スプレッドシート名が地区名と完全一致し、GASがスタンドアロン展開されていること。
-  2. 11シートが自動生成され、総ピン数・分母が `address_master.csv` と完全一致すること。
+  2. 12シートが自動生成され、総ピン数・分母が `address_master.csv` と完全一致すること。
   3. 業務シート（実績・名簿等）に前地区の残骸や不要なテストデータが一切ないこと（初期ゼロ状態）。
-  4. `scripts/check-provisioning-gate.mjs` ALL PASS ＆ ブラウザE2Eで全ピン描画・エラー0件であること。
+  4. `scripts/check-provisioning-gate.mjs` ALL PASS ＆ ブラウザE2Eで全ピン描画・エラー0件、`active/` 配下に改変がないこと。
 
 ### Gate 4: ダッシュボードデータ層確定審査 (Dashboard Gate)
 - **対象**: `active/manager/manager.js`、ダッシュボード本番画面

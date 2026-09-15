@@ -5,7 +5,7 @@
   "deployment.json",
   "deployment.template.json",
   "CNAME",
-  "active/dashboard/config.js",
+  "data/config.js",
   "DEPLOYMENT_REGISTRY.md",
   "data/address_master.csv",
   "data/boundaries.geojson",

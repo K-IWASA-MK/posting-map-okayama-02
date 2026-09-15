@@ -198,7 +198,7 @@ async function main() {
 
     console.log('\n📦 [3/3] Testing PWA & Critical Endpoints...');
     const pwaUrls = [
-      'http://localhost:8080/active/dashboard/config.js',
+      'http://localhost:8080/data/config.js',
       'http://localhost:8080/active/dashboard/db.js',
       'http://localhost:8080/active/dashboard/app.js',
       'http://localhost:8080/active/dashboard/render.js',

@@ -35,15 +35,20 @@ async function main() {
     throw new Error('❌ deployment.json missing districtId or webAppUrl.');
   }
 
-  const configPath = path.join(rootDir, 'active', 'dashboard', 'config.js');
+  const configPath = path.join(rootDir, 'data', 'config.js');
   if (!fs.existsSync(configPath)) {
-    throw new Error('❌ active/dashboard/config.js not found.');
+    throw new Error('❌ data/config.js not found.');
   }
   const configText = fs.readFileSync(configPath, 'utf8');
   if (!configText.includes(webAppUrl)) {
-    throw new Error('❌ config.js is not synchronized with deployment.json webAppUrl.');
+    throw new Error('❌ data/config.js is not synchronized with deployment.json webAppUrl.');
   }
-  console.log(`   ✅ SSOT Synchronized: District=${targetDistrict}, WebApp=${webAppUrl.substring(0, 45)}...`);
+
+  const forbiddenConfigPath = path.join(rootDir, 'active', 'dashboard', 'config.js');
+  if (fs.existsSync(forbiddenConfigPath)) {
+    throw new Error('❌ Architecture Violation: active/dashboard/config.js still exists! Config belongs to data/config.js only.');
+  }
+  console.log(`   ✅ SSOT Synchronized: District=${targetDistrict}, WebApp=${webAppUrl.substring(0, 45)}... (data/config.js SSOT verified)`);
 
   console.log('\n▶ [Gate 2] Address Master CSV Baseline Inspection...');
   const csvPath = path.join(rootDir, 'data', 'address_master.csv');

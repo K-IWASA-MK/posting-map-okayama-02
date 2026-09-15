@@ -2,18 +2,21 @@
 
 ## 1. Architecture — ABSOLUTE
 
-- Spreadsheet = Pure DB / GAS = Standalone only.
-- Container-bound Apps Script is NOT part of the current architecture.
-- Current architecture is authoritative; legacy implementations that are not part of the current architecture must not be restored, synchronized, or treated as active architecture.
-- Never create, restore, synchronize, or depend on container-bound GAS.
-- Existing container-bound GAS found in a copied Spreadsheet is legacy residue.
+- POSTING MAP is a standalone application and a standalone repository.
+- Each district is an independent application and repository.
+- active/ = district-agnostic universal engine. Never modify active/ for district specialization.
+- data/ = district-specific data and client configuration (address_master.csv, boundaries.geojson, municipality_master.csv, config.js, area_mapping.json).
+- Spreadsheet = Pure DB. No scripts allowed inside.
+- GAS = Standalone only.
+- Container-bound Apps Script is NOT part of the current architecture. Never create, restore, synchronize, or depend on it.
+- District identity comes dynamically from Spreadsheet name and data/. Never hardcode district names, IDs, or endpoints in active/.
 
 ## 2. District Independence — ABSOLUTE
 
-- Each district is an independent repository/application.
-- No cross-district merge, shared branch, or code/data contamination.
-- District identity comes only from Spreadsheet name and data/.
-- Never hardcode district names, IDs, or locations in active/.
+- Each district must operate 100% independently.
+- A new district is created by copying Universal POSTING MAP and replacing data/.
+- No cross-district repository, branch, code, data, or runtime dependency.
+- All production resources (Spreadsheet, GAS, Drive, LIFF) are strictly isolated per district.
 
 ## 3. Execution — ABSOLUTE
 
@@ -39,6 +42,7 @@
 
 AI社員は作業フェーズに応じて、必ず以下の詳細規程・ワークフローを参照・遵守すること。
 
+- 現行アーキテクチャ定義: [docs/architecture/CURRENT_ARCHITECTURE.md](docs/architecture/CURRENT_ARCHITECTURE.md)
 - 開発・完了報告手順: [.agents/workflows/development/workflow.md](.agents/workflows/development/workflow.md)
 - 検証・検品規程 & HARD STOP条件: [.agents/rules/verification-gates.md](.agents/rules/verification-gates.md)
 - 権限境界・Scope最小化・禁止事項: [.agents/rules/agent-authority.md](.agents/rules/agent-authority.md)
