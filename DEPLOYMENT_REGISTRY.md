@@ -22,7 +22,7 @@ URL を変更してはならない。
 
 | Environment | Status | Script ID | Deployment ID | Web App URL | Notes |
 |-------------|--------|-----------|---------------|-------------|-------|
-| OKAYAMA-02 | Production | `1XAK1_6JxPtBUZaP6IsaFe3WWv2iz8SHl8bftnvYL9SnVELGfaW_z1Llo` | `AKfycbziJy-eQ4g3sJ9BytSZO1XX1Ri7zclrf7ov6qG2HI0RAbn5L9nNisXUyA10Q6IE0OEI` | 固定 | 岡山第2区 |
+| (DISTRICT_ID) | Template / Ready | `(Script ID)` | `(Deployment ID)` | `(Web App URL)` | 新地区プロビジョニング時に記入 |
 
 ---
 
@@ -30,7 +30,7 @@ URL を変更してはならない。
 
 | District | Role | Spreadsheet ID | Spreadsheet Name | Status |
 |---|---|---|---|---|
-| OKAYAMA-02 | 新地区本番稼働 | `1-fg6TlrE68ThUjGmJa7ly5_B6HZ3b8mzGCejSKUOY5o` | `OKAYAMA-02` | 本番DB自動配備・508件プロビジョニング完了 |
+| (DISTRICT_ID) | 新地区本番稼働 | `(Spreadsheet ID)` | `(District Name)` | プロビジョニング時に自動配備 |
 
 ---
 

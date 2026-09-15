@@ -93,13 +93,17 @@ async function main() {
       });
     });
 
-    await hPage.addInitScript(() => {
-      localStorage.setItem('user_info', JSON.stringify({
-        id: 'STAFF_OKAYAMA_TEST',
-        last: '岡山',
-        first: '配布員',
-        picture: ''
-      }));
+    const testStaffId = process.env.TEST_STAFF_ID || 'STAFF_VERIFIER_TEST';
+    const testStaffLastName = process.env.TEST_STAFF_LAST_NAME || 'テスト';
+    const testStaffFirstName = process.env.TEST_STAFF_FIRST_NAME || '配布員';
+
+    await hPage.addInitScript((staff) => {
+      localStorage.setItem('user_info', JSON.stringify(staff));
+    }, {
+      id: testStaffId,
+      last: testStaffLastName,
+      first: testStaffFirstName,
+      picture: ''
     });
 
     await hPage.goto('http://localhost:8080/active/dashboard/index.html', { waitUntil: 'load', timeout: 15000 });

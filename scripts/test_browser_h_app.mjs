@@ -34,8 +34,21 @@ function startLocalServer() {
           if (filePath.endsWith('.json')) contentType = 'application/json';
           if (filePath.endsWith('.png')) contentType = 'image/png';
           if (filePath.endsWith('.csv')) contentType = 'text/plain; charset=utf-8';
+
+          let responseData = data;
+          if (filePath.endsWith('config.js')) {
+            let configText = data.toString('utf8');
+            if (configText.includes('gasWebAppUrl: ""')) {
+              configText = configText.replace('gasWebAppUrl: ""', `gasWebAppUrl: "http://localhost:${PORT}/mock-exec"`);
+            }
+            if (configText.includes('liffId: ""')) {
+              configText = configText.replace('liffId: ""', 'liffId: "test-liff-id"');
+            }
+            responseData = Buffer.from(configText, 'utf8');
+          }
+
           res.writeHead(200, { 'Content-Type': contentType });
-          res.end(data);
+          res.end(responseData);
         }
       });
     });
@@ -80,8 +93,66 @@ async function runTest(url, label) {
     });
   });
 
-  // Mock window.liff and set mock user_info in localStorage to bypass login
+
+  // Mock GAS backend API calls
+  await page.route('**/*exec*', async route => {
+    const postData = route.request().postData() || '';
+    const reqUrl = route.request().url();
+
+    if (reqUrl.includes('action=getSystemSummary') || postData.includes('getSystemSummary')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          districtName: 'TEST-DISTRICT',
+          done: 1,
+          total: 2,
+          status: 'ACTIVE'
+        })
+      });
+      return;
+    }
+
+    if (reqUrl.includes('action=getDistributionStatus') || postData.includes('getDistributionStatus')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          statusMap: { '1': 'COMPLETED', '2': 'IN_PROGRESS' }
+        })
+      });
+      return;
+    }
+
+    if (reqUrl.includes('action=saveDistributionReport') || postData.includes('saveDistributionReport')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, message: 'Report saved' })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: [] })
+    });
+  });
+
+  // Inject test config and mock user_info
   await page.addInitScript(() => {
+    if (!window.PMS_CLIENT_CONFIG) window.PMS_CLIENT_CONFIG = {};
+    if (!window.PMS_CLIENT_CONFIG.api) window.PMS_CLIENT_CONFIG.api = {};
+    if (!window.PMS_CLIENT_CONFIG.api.gasWebAppUrl) {
+      window.PMS_CLIENT_CONFIG.api.gasWebAppUrl = 'http://localhost:8093/mock-exec';
+    }
+    if (!window.PMS_CLIENT_CONFIG.line) window.PMS_CLIENT_CONFIG.line = {};
+    if (!window.PMS_CLIENT_CONFIG.line.liffId) {
+      window.PMS_CLIENT_CONFIG.line.liffId = 'test-liff-id';
+    }
     localStorage.setItem('user_info', JSON.stringify({
       id: 'STAFF123',
       last: 'テスト',
@@ -242,7 +313,15 @@ async function main() {
   // 1. Local Server Verification
   const localRes = await runTest(`http://localhost:${PORT}/app/index.html`, 'LOCAL SERVER');
 
-  const prodRes = await runTest('https://okayama-02.postingmap.jp/', 'PRODUCTION ENDPOINT');
+  const prodUrl = process.env.TEST_PRODUCTION_URL || (process.argv.includes('--prod-url') ? process.argv[process.argv.indexOf('--prod-url') + 1] : null);
+  if (prodUrl) {
+    const prodRes = await runTest(prodUrl, `PRODUCTION ENDPOINT (${prodUrl})`);
+    if (prodRes.consoleErrors.length > 0) {
+      console.error('❌ Production test failed with console errors');
+      server.close();
+      process.exit(1);
+    }
+  }
 
   server.close();
 

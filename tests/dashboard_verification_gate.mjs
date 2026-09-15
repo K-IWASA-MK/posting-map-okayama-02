@@ -53,7 +53,7 @@ async function runDashboardQualityGate() {
 
   const spawnedServer = await ensureServerRunning();
   // 1. config.js から動的に静的マスター定義を取得し、期待件数を算出（地区非依存化）
-  const configPath = path.resolve(process.cwd(), 'active/dashboard/config.js');
+  const configPath = path.resolve(process.cwd(), 'data/config.js');
   let expectedCsvPinsCount = 0;
   let csvFilename = '';
 
@@ -95,21 +95,138 @@ async function runDashboardQualityGate() {
       } catch (e) {}
     });
 
-    await page.route('**/exec*', async (route, request) => {
-      if (request.method() === 'POST') {
-        const postData = request.postData() || '';
-        if (postData.includes('verifyManagerPassword') || request.url().includes('action=verifyManagerPassword')) {
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json; charset=utf-8',
-            body: JSON.stringify({
-              success: true,
-              districtCode: 'DEFAULT'
-            })
-          });
-          return;
-        }
+    await page.route('**/data/config.js*', async (route) => {
+      const originalPath = path.resolve(process.cwd(), 'data/config.js');
+      let content = fs.readFileSync(originalPath, 'utf8');
+      content = content.replace('gasWebAppUrl: ""', 'gasWebAppUrl: "http://localhost:8080/mock-gas/exec"');
+      content = content.replace('liffId: ""', 'liffId: "9999999999-TestLiff"');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/javascript; charset=utf-8',
+        body: content
+      });
+    });
+
+    await page.route('**/*exec*', async (route, request) => {
+      const url = request.url();
+      const method = request.method();
+      const postData = request.postData() || '';
+
+      if (postData.includes('verifyManagerPassword') || url.includes('action=verifyManagerPassword')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            districtCode: 'DEFAULT'
+          })
+        });
+        return;
       }
+
+      if (url.includes('action=getSystemSummary') || postData.includes('getSystemSummary')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            districtName: '岡山地区 (テスト)',
+            totalAreas: expectedCsvPinsCount,
+            doneAreas: 12,
+            unallocatedAreas: expectedCsvPinsCount - 12,
+            totalRecords: 12000,
+            totalStocks: 3500,
+            activePosters: 5,
+            liveEvents: []
+          })
+        });
+        return;
+      }
+
+      if (url.includes('action=getGlobalPinStatus') || postData.includes('getGlobalPinStatus')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            statusMap: {}
+          })
+        });
+        return;
+      }
+
+      if (url.includes('action=getTier1') || postData.includes('getTier1')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            cities: expectedCities
+          })
+        });
+        return;
+      }
+
+      if (url.includes('action=getFlyerStock') || postData.includes('getFlyerStock') || url.includes('action=getStocks') || postData.includes('getStocks')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            stocks: [{ id: '1', name: 'Aチラシ', count: 100 }]
+          })
+        });
+        return;
+      }
+
+      if (url.includes('action=getRanking') || postData.includes('getRanking') || url.includes('action=getPosterRanking') || postData.includes('getPosterRanking')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            ranking: [{ rank: 1, name: '配布員A', count: 500 }]
+          })
+        });
+        return;
+      }
+
+      if (url.includes('action=getRoster') || postData.includes('getRoster')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            roster: [{ id: '1', name: '配布員A' }]
+          })
+        });
+        return;
+      }
+
+      if (url.includes('action=getTransferRequests') || postData.includes('getTransferRequests')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            requests: []
+          })
+        });
+        return;
+      }
+
+      if (url.includes('action=getLatestDistribution') || postData.includes('getLatestDistribution')) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({
+            success: true,
+            distributions: []
+          })
+        });
+        return;
+      }
+
       await route.continue();
     });
   }
@@ -387,11 +504,14 @@ async function runDashboardQualityGate() {
 
     // -------------------------------------------------------------
     // PHASE 6: Hアプリ非干渉 & アーキテクチャ分離監査
-    // -------------------------------------------------------------
     console.log("\n▶ [PHASE 6] Hアプリ非干渉 & アーキテクチャ分離監査 実行中...");
     const page6 = await browser.newPage();
+    await setupAuthenticatedPage(page6);
     let hAppException = false;
-    page6.on('pageerror', () => { hAppException = true; });
+    page6.on('pageerror', (err) => {
+      console.error('[H-App PageError]', err);
+      hAppException = true;
+    });
 
     await page6.addInitScript(() => {
       window.liff = {
@@ -408,18 +528,15 @@ async function runDashboardQualityGate() {
     await page6.waitForSelector('#app', { timeout: 5000 }).catch(() => {});
     await page6.close();
 
-    // Hアプリロジック（active/dashboard/app.js, render.js 等）が staticMaster を参照していないことの監査
+    // Hアプリロジック（active/dashboard/app.js, render.js 等）が staticMaster を参照していないことの監査（active/配下ゼロ件完全隔離）
     const grepStaticMasterHApp = execSync("git grep -n 'staticMaster' active/dashboard/ || true", { encoding: 'utf8' }).trim();
     const staticMasterOccurrences = grepStaticMasterHApp.split('\n').filter(Boolean);
-    const isStaticMasterIsolated = (
-      staticMasterOccurrences.length === 1 &&
-      staticMasterOccurrences[0].startsWith('active/dashboard/config.js:')
-    );
+    const isStaticMasterIsolated = (staticMasterOccurrences.length === 0);
 
     const phase6Pass = (!hAppException && isStaticMasterIsolated);
     results.phase6.pass = phase6Pass;
     results.phase6.details.push(`Hアプリ起動正常性: ${hAppException ? 'FAIL (例外発生)' : 'PASS (正常)'}`);
-    results.phase6.details.push(`Hアプリロジック非干渉 (staticMaster隔離): ${isStaticMasterIsolated ? 'PASS' : 'FAIL'}`);
+    results.phase6.details.push(`Hアプリロジック非干渉 (active/ 内 staticMaster 完全追放): ${isStaticMasterIsolated ? 'PASS (0件)' : 'FAIL'}`);
 
   } catch (err) {
     console.error("Quality Gate Error:", err);

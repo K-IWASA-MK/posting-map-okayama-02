@@ -4,73 +4,100 @@ import path from 'path';
 const rootDir = process.cwd();
 const deploymentPath = path.join(rootDir, 'deployment.json');
 
+let targetConfigJson = deploymentPath;
 if (!fs.existsSync(deploymentPath)) {
-  console.error('❌ Error: deployment.json missing!');
-  process.exit(1);
+  const templatePath = path.join(rootDir, 'deployment.template.json');
+  if (fs.existsSync(templatePath)) {
+    targetConfigJson = templatePath;
+    console.log('ℹ️ [SSOT Validator] deployment.json not found, inspecting deployment.template.json...');
+  } else {
+    console.error('❌ Error: Neither deployment.json nor deployment.template.json found!');
+    process.exit(1);
+  }
 }
 
 let deploymentData;
 try {
-  deploymentData = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
+  deploymentData = JSON.parse(fs.readFileSync(targetConfigJson, 'utf8'));
 } catch (e) {
-  console.error(`❌ Error: Failed to parse deployment.json: ${e.message}`);
+  console.error(`❌ Error: Failed to parse ${targetConfigJson}: ${e.message}`);
   process.exit(1);
 }
 
-const ssotUrl = deploymentData?.resources?.webAppUrl;
-const ssotLiffUrl = deploymentData?.resources?.productionLiffUrl;
+const ssotUrl = (deploymentData?.resources?.webAppUrl || '').trim();
+const ssotLiffUrl = (deploymentData?.resources?.productionLiffUrl || '').trim();
 
-if (!ssotUrl) {
-  console.error('❌ Error: webAppUrl not found in deployment.json!');
-  process.exit(1);
+const isTemplateMode = ssotUrl === '' && ssotLiffUrl === '';
+
+let ssotLiffId = '';
+if (ssotLiffUrl) {
+  try {
+    const parsedUrl = new URL(ssotLiffUrl);
+    ssotLiffId = parsedUrl.pathname.split('/').filter(Boolean)[0] || '';
+  } catch (e) {
+    console.error(`❌ Error: Invalid productionLiffUrl: ${ssotLiffUrl}`);
+    process.exit(1);
+  }
 }
 
-if (!ssotLiffUrl) {
-  console.error('❌ Error: productionLiffUrl not found in deployment.json!');
-  process.exit(1);
-}
-
-let ssotLiffId;
-try {
-  const parsedUrl = new URL(ssotLiffUrl);
-  ssotLiffId = parsedUrl.pathname.split('/').filter(Boolean)[0];
-} catch (e) {
-  console.error(`❌ Error: Invalid productionLiffUrl: ${ssotLiffUrl}`);
-  process.exit(1);
-}
-
-console.log(`[SSOT Validator] Target SSOT WebApp URL: ${ssotUrl}`);
-console.log(`[SSOT Validator] Target SSOT LIFF ID:    ${ssotLiffId} (from ${ssotLiffUrl})`);
+console.log(`[SSOT Validator] Target SSOT WebApp URL: ${ssotUrl || '(Pure Template: Empty)'}`);
+console.log(`[SSOT Validator] Target SSOT LIFF ID:    ${ssotLiffId || '(Pure Template: Empty)'}`);
 
 let hasMismatch = false;
 
-const activeConfigPath = path.join(rootDir, 'active', 'dashboard', 'config.js');
+const activeConfigPath = path.join(rootDir, 'data', 'config.js');
 if (!fs.existsSync(activeConfigPath)) {
-  console.error(`❌ Missing active/dashboard/config.js! Run 'npm run sync:config' first.`);
+  console.error(`❌ Missing data/config.js! Run 'npm run sync:config' first.`);
   hasMismatch = true;
 } else {
   const configContent = fs.readFileSync(activeConfigPath, 'utf8');
 
-  if (!configContent.includes(ssotUrl)) {
-    console.error(`❌ Mismatch in active/dashboard/config.js: gasWebAppUrl does not match SSOT URL!`);
-    hasMismatch = true;
+  if (isTemplateMode) {
+    const isUrlEmpty = configContent.includes('gasWebAppUrl: ""');
+    const isLiffEmpty = configContent.includes('liffId: ""');
+    if (!isUrlEmpty) {
+      console.error(`❌ Template Violation: data/config.js gasWebAppUrl must be empty in template mode!`);
+      hasMismatch = true;
+    } else {
+      console.log(`✅ PASS: data/config.js gasWebAppUrl is empty in template mode.`);
+    }
+    if (!isLiffEmpty) {
+      console.error(`❌ Template Violation: data/config.js liffId must be empty in template mode!`);
+      hasMismatch = true;
+    } else {
+      console.log(`✅ PASS: data/config.js liffId is empty in template mode.`);
+    }
   } else {
-    console.log(`✅ PASS: active/dashboard/config.js matches SSOT WebApp URL.`);
-  }
+    if (!configContent.includes(ssotUrl)) {
+      console.error(`❌ Mismatch in data/config.js: gasWebAppUrl does not match SSOT URL!`);
+      hasMismatch = true;
+    } else {
+      console.log(`✅ PASS: data/config.js matches SSOT WebApp URL.`);
+    }
 
-  if (!configContent.includes(ssotLiffId)) {
-    console.error(`❌ Mismatch in active/dashboard/config.js: liffId does not match SSOT LIFF ID!`);
-    hasMismatch = true;
-  } else {
-    console.log(`✅ PASS: active/dashboard/config.js matches SSOT LIFF ID.`);
+    if (!configContent.includes(ssotLiffId)) {
+      console.error(`❌ Mismatch in data/config.js: liffId does not match SSOT LIFF ID!`);
+      hasMismatch = true;
+    } else {
+      console.log(`✅ PASS: data/config.js matches SSOT LIFF ID.`);
+    }
   }
 
   if (configContent.includes('spreadsheetId')) {
-    console.error(`❌ Policy Violation: active/dashboard/config.js contains spreadsheetId (must remain district-agnostic).`);
+    console.error(`❌ Policy Violation: data/config.js contains spreadsheetId (must remain district-agnostic).`);
     hasMismatch = true;
   } else {
-    console.log(`✅ PASS: active/dashboard/config.js is free of spreadsheetId.`);
+    console.log(`✅ PASS: data/config.js is free of spreadsheetId.`);
   }
+}
+
+// active/ ディレクトリ内に config.js が残存していないことの不可侵性検証
+const forbiddenActiveConfig = path.join(rootDir, 'active', 'dashboard', 'config.js');
+if (fs.existsSync(forbiddenActiveConfig)) {
+  console.error(`❌ Architecture Violation: active/dashboard/config.js must be removed! Config belongs to data/config.js only.`);
+  hasMismatch = true;
+} else {
+  console.log(`✅ PASS: active/dashboard/ is clean (zero config files).`);
 }
 
 const appJsPath = path.join(rootDir, 'active', 'dashboard', 'app.js');
@@ -87,14 +114,14 @@ if (fs.existsSync(appJsPath)) {
 const rootIndexPath = path.join(rootDir, 'index.html');
 if (fs.existsSync(rootIndexPath)) {
   const indexContent = fs.readFileSync(rootIndexPath, 'utf8');
-  if (!indexContent.includes('./active/dashboard/config.js')) {
-    console.error(`❌ Configuration error in index.html: Does not load ./active/dashboard/config.js!`);
+  if (!indexContent.includes('./data/config.js')) {
+    console.error(`❌ Configuration error in index.html: Does not load ./data/config.js!`);
     hasMismatch = true;
   } else {
-    console.log(`✅ PASS: index.html loads ./active/dashboard/config.js.`);
+    console.log(`✅ PASS: index.html loads ./data/config.js.`);
   }
 
-  if (indexContent.includes(ssotLiffId)) {
+  if (ssotLiffId && indexContent.includes(ssotLiffId)) {
     console.error(`❌ Hardcoded LIFF ID in index.html: Found static ${ssotLiffId}!`);
     hasMismatch = true;
   } else {

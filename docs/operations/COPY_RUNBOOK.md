@@ -47,11 +47,14 @@ MASTERは以下の3点情報を確定し、新地区展開パイプラインを�
 
 ---
 
-### Stage 1: コピー元原本の保全・クリーン確認 (Source Repository Freeze)
-1. **原本本番リソースの保護確認**:
-   - コピー元のSpreadsheet、Drive写真フォルダ、GAS実行環境には一切手を触れない。
+### Stage 1: コピー元原本の純度確認 ＆ 凍結 (Source Purity Verification & Freeze)
+1. **コピー元原本の純度判定 (Purity PASS)**:
+   - コピー元には「コピーされてはいけないもの（実体設定・RAWデータ・作業残骸）」が一切存在しないことを機械判定する：
+   ```bash
+   npm run check:purity
+   ```
+   - 判定結果が **ALL PASS** であることを確認（`deployment.json`, `.clasp.json`, `CNAME`, `data/raw/` 排除済）。
 2. **ワーキングツリーのクリーン確認**:
-   - 不要な一時スクリプト（`scratch/` 等）やデバッグ残骸を排除。
    - `git status` が `working tree clean` であることを確認し、原本状態を凍結。
 
 ---
