@@ -81,22 +81,7 @@ function doGet(e) {
 
   const isReadOnlyAction = [
     'getSystemSummary',
-    'getDashboardData',
-    'getTier1',
-    'getFlyerStock',
-    'getRanking',
-    'getLatestDistribution',
-    'getMapsApiKey',
-    'getDeliveryStats',
-    'getAreaDetails',
-    'getGlobalPinStatus',
-    'getBulletinPosts',
-    'verifyManagerPassword'
-  ].includes(action);
-
-  const isDashboardAction = [
-    'getRoster',
-    'getTransferRequests'
+    'getMapsApiKey'
   ].includes(action);
 
   if (action === 'registerOrValidateDevice') {
@@ -156,7 +141,7 @@ function doGet(e) {
     }
   }
 
-  if (!isReadOnlyAction && !isDashboardAction) {
+  if (!isReadOnlyAction) {
     const auth = authenticateRequest(params);
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))
@@ -291,22 +276,7 @@ function doPost(e) {
 
   const isReadOnlyAction = [
     'getSystemSummary',
-    'getDashboardData',
-    'getTier1',
-    'getFlyerStock',
-    'getRanking',
-    'getLatestDistribution',
-    'getMapsApiKey',
-    'getDeliveryStats',
-    'getAreaDetails',
-    'getGlobalPinStatus',
-    'getBulletinPosts',
-    'verifyManagerPassword'
-  ].includes(action);
-
-  const isDashboardAction = [
-    'getRoster',
-    'getTransferRequests'
+    'getMapsApiKey'
   ].includes(action);
 
   if (action === 'registerOrValidateDevice') {
@@ -537,7 +507,7 @@ function doPost(e) {
     }
   }
 
-  if (!isReadOnlyAction && !isDashboardAction) {
+  if (!isReadOnlyAction) {
     const auth = authenticateRequest(postData || {});
     if (!auth.success) {
       return ContentService.createTextOutput(JSON.stringify(auth))

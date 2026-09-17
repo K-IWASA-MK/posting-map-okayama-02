@@ -4,30 +4,21 @@ import path from 'path';
 const rootDir = process.cwd();
 const deploymentPath = path.join(rootDir, 'deployment.json');
 
-let targetConfigJson = deploymentPath;
 if (!fs.existsSync(deploymentPath)) {
-  const templatePath = path.join(rootDir, 'deployment.template.json');
-  if (fs.existsSync(templatePath)) {
-    targetConfigJson = templatePath;
-    console.log('ℹ️ [SSOT Validator] deployment.json not found, inspecting deployment.template.json...');
-  } else {
-    console.error('❌ Error: Neither deployment.json nor deployment.template.json found!');
-    process.exit(1);
-  }
+  console.error('❌ Error: deployment.json not found!');
+  process.exit(1);
 }
 
 let deploymentData;
 try {
-  deploymentData = JSON.parse(fs.readFileSync(targetConfigJson, 'utf8'));
+  deploymentData = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
 } catch (e) {
-  console.error(`❌ Error: Failed to parse ${targetConfigJson}: ${e.message}`);
+  console.error(`❌ Error: Failed to parse ${deploymentPath}: ${e.message}`);
   process.exit(1);
 }
 
 const ssotUrl = (deploymentData?.resources?.webAppUrl || '').trim();
 const ssotLiffUrl = (deploymentData?.resources?.productionLiffUrl || '').trim();
-
-const isTemplateMode = ssotUrl === '' && ssotLiffUrl === '';
 
 let ssotLiffId = '';
 if (ssotLiffUrl) {
@@ -40,8 +31,8 @@ if (ssotLiffUrl) {
   }
 }
 
-console.log(`[SSOT Validator] Target SSOT WebApp URL: ${ssotUrl || '(Pure Template: Empty)'}`);
-console.log(`[SSOT Validator] Target SSOT LIFF ID:    ${ssotLiffId || '(Pure Template: Empty)'}`);
+console.log(`[SSOT Validator] Target SSOT WebApp URL: ${ssotUrl}`);
+console.log(`[SSOT Validator] Target SSOT LIFF ID:    ${ssotLiffId}`);
 
 let hasMismatch = false;
 
@@ -52,28 +43,12 @@ if (!fs.existsSync(activeConfigPath)) {
 } else {
   const configContent = fs.readFileSync(activeConfigPath, 'utf8');
 
-  if (isTemplateMode) {
-    const isUrlEmpty = configContent.includes('gasWebAppUrl: ""');
-    const isLiffEmpty = configContent.includes('liffId: ""');
-    if (!isUrlEmpty) {
-      console.error(`❌ Template Violation: data/config.js gasWebAppUrl must be empty in template mode!`);
-      hasMismatch = true;
-    } else {
-      console.log(`✅ PASS: data/config.js gasWebAppUrl is empty in template mode.`);
-    }
-    if (!isLiffEmpty) {
-      console.error(`❌ Template Violation: data/config.js liffId must be empty in template mode!`);
-      hasMismatch = true;
-    } else {
-      console.log(`✅ PASS: data/config.js liffId is empty in template mode.`);
-    }
+  if (!configContent.includes(ssotUrl)) {
+    console.error(`❌ Mismatch in data/config.js: gasWebAppUrl does not match SSOT URL!`);
+    hasMismatch = true;
   } else {
-    if (!configContent.includes(ssotUrl)) {
-      console.error(`❌ Mismatch in data/config.js: gasWebAppUrl does not match SSOT URL!`);
-      hasMismatch = true;
-    } else {
-      console.log(`✅ PASS: data/config.js matches SSOT WebApp URL.`);
-    }
+    console.log(`✅ PASS: data/config.js matches SSOT WebApp URL.`);
+  }
 
     if (!configContent.includes(ssotLiffId)) {
       console.error(`❌ Mismatch in data/config.js: liffId does not match SSOT LIFF ID!`);
@@ -81,7 +56,6 @@ if (!fs.existsSync(activeConfigPath)) {
     } else {
       console.log(`✅ PASS: data/config.js matches SSOT LIFF ID.`);
     }
-  }
 
   if (configContent.includes('spreadsheetId')) {
     console.error(`❌ Policy Violation: data/config.js contains spreadsheetId (must remain district-agnostic).`);

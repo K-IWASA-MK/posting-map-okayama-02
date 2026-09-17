@@ -14,8 +14,6 @@ scratch/
 .env
 .env.*
 .clasp.json
-deployment.json
-CNAME
 
 # External Raw Archives
 data/raw/

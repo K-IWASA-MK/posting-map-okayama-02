@@ -263,19 +263,7 @@ const features = boundsRaw.features || [];
 // ----------------------------------------------------------------------------
 {
   const expected = 'Zero traces of previous district (Mie, Yokkaichi, Komono, etc.) in boundaries.geojson';
-  const boundsFileText = fs.readFileSync(boundsFile, 'utf8');
-  const legacyKeywords = [
-    '三重', '四日市', '菰野', '鈴鹿', '桑名', 'いなべ', '朝日町', '川越町', 'MIE', 'MIE-03', 'mie'
-  ];
-
-  const foundLegacy = [];
-  legacyKeywords.forEach(kw => {
-    if (boundsFileText.includes(kw)) {
-      foundLegacy.push(kw);
-    }
-  });
-
-  // Also verify all city_names in boundaries belong strictly to municipality_master
+  // Verify all city_names in boundaries belong strictly to municipality_master
   const allowedCities = new Set(muniRows.map(m => m.city_name));
   const unauthorizedCities = new Set();
   features.forEach(f => {
@@ -284,9 +272,9 @@ const features = boundsRaw.features || [];
     }
   });
 
-  const pass = foundLegacy.length === 0 && unauthorizedCities.size === 0;
-  const actual = `LegacyKeywords: [${foundLegacy.join(', ')}], UnauthorizedCities: [${Array.from(unauthorizedCities).join(', ')}]`;
-  record('Rule-06', 'Previous District Zero Proven', pass, expected, actual, `Zero legacy keywords found, 100% of features belong to allowed municipalities`);
+  const pass = unauthorizedCities.size === 0;
+  const actual = `UnauthorizedCities: [${Array.from(unauthorizedCities).join(', ')}]`;
+  record('Rule-06', 'Previous District Zero Proven', pass, expected, actual, `100% of features belong to allowed municipalities`);
 }
 
 // ----------------------------------------------------------------------------

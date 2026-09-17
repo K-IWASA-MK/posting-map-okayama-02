@@ -95,17 +95,6 @@ async function runDashboardQualityGate() {
       } catch (e) {}
     });
 
-    await page.route('**/data/config.js*', async (route) => {
-      const originalPath = path.resolve(process.cwd(), 'data/config.js');
-      let content = fs.readFileSync(originalPath, 'utf8');
-      content = content.replace('gasWebAppUrl: ""', 'gasWebAppUrl: "http://localhost:8080/mock-gas/exec"');
-      content = content.replace('liffId: ""', 'liffId: "9999999999-TestLiff"');
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/javascript; charset=utf-8',
-        body: content
-      });
-    });
 
     await page.route('**/*exec*', async (route, request) => {
       const url = request.url();
