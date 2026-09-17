@@ -55,5 +55,6 @@
   "scripts/check-scope.mjs",
   "tests/dashboard_verification_gate.mjs",
   "scripts/validate-auditor-gate.mjs",
-  "active/dashboard/index.html"
+  "active/dashboard/index.html",
+  "active/dashboard/app.js"
 ]
