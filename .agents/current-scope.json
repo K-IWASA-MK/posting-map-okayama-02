@@ -54,5 +54,6 @@
   "active/api/v2_api.js",
   "scripts/check-scope.mjs",
   "tests/dashboard_verification_gate.mjs",
-  "scripts/validate-auditor-gate.mjs"
+  "scripts/validate-auditor-gate.mjs",
+  "active/dashboard/index.html"
 ]
