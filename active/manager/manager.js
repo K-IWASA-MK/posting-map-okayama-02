@@ -523,6 +523,22 @@ if (typeof window !== 'undefined') {
   window.onCitySelected = onCitySelected;
 }
 
+function adjustMobileCitySelectorHeight() {
+  const bar = document.getElementById('mobile-situation-bar');
+  const listEl = document.getElementById('mobile-city-selector-list');
+  if (!listEl) return;
+
+  if (bar && bar.offsetParent !== null) {
+    const listRect = listEl.getBoundingClientRect();
+    const barRect = bar.getBoundingClientRect();
+    // dropdown上端からKPIカード下端までを実測し、dropdownの表示高さを設定
+    const exactHeight = Math.round(barRect.bottom - listRect.top);
+    if (exactHeight > 0) {
+      listEl.style.height = `${exactHeight}px`;
+    }
+  }
+}
+
 function toggleCityDropdown(event, isMobile) {
   if (event) event.stopPropagation();
   const suffix = isMobile ? 'mobile-city-selector' : 'city-selector';
@@ -534,9 +550,15 @@ function toggleCityDropdown(event, isMobile) {
   if (isHidden) {
     listEl.classList.remove('hidden');
     if (triggerEl) triggerEl.setAttribute('aria-expanded', 'true');
+    if (isMobile) {
+      adjustMobileCitySelectorHeight();
+    }
   } else {
     listEl.classList.add('hidden');
     if (triggerEl) triggerEl.setAttribute('aria-expanded', 'false');
+    if (isMobile) {
+      listEl.style.height = '';
+    }
   }
 }
 
@@ -544,10 +566,22 @@ function closeCityDropdown() {
   ['city-selector', 'mobile-city-selector'].forEach(suffix => {
     const listEl = document.getElementById(`${suffix}-list`);
     const triggerEl = document.getElementById(`${suffix}-trigger`);
-    if (listEl) listEl.classList.add('hidden');
+    if (listEl) {
+      listEl.classList.add('hidden');
+      if (suffix === 'mobile-city-selector') {
+        listEl.style.height = '';
+      }
+    }
     if (triggerEl) triggerEl.setAttribute('aria-expanded', 'false');
   });
 }
+
+// ドロップダウン外側のタップ・クリックで自動クローズ
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#city-selector-container') && !e.target.closest('#mobile-city-selector-trigger') && !e.target.closest('#mobile-city-selector-list')) {
+    closeCityDropdown();
+  }
+});
 
 function selectCity(cityName) {
   DashboardState.selectedCity = cityName;
@@ -560,7 +594,10 @@ function selectCity(cityName) {
   if (mobileLabelEl) mobileLabelEl.textContent = labelText;
 
   const mobileList = document.getElementById('mobile-city-selector-list');
-  if (mobileList) mobileList.classList.add('hidden');
+  if (mobileList) {
+    mobileList.classList.add('hidden');
+    mobileList.style.height = '';
+  }
 
   updateCitySelectorHighlight(cityName);
   onCitySelected(cityName);
@@ -602,14 +639,17 @@ function populateCitySelector(cities) {
     if (!listEl) return;
     listEl.innerHTML = '';
 
+    const isMobile = listId === 'mobile-city-selector-list';
+    const pxClass = isMobile ? 'px-2 py-1.5' : 'px-2.5 py-1.5';
+
     const allBtn = document.createElement('button');
     allBtn.type = 'button';
     allBtn.setAttribute('data-city-val', 'ALL');
     allBtn.onclick = (e) => { e.stopPropagation(); selectCity('ALL'); };
-    allBtn.innerHTML = `<span>全域</span><span class="city-check text-[11px] font-bold">${currentVal === 'ALL' ? '✓' : ''}</span>`;
+    allBtn.innerHTML = `<span class="truncate">全域</span><span class="city-check text-[11px] font-bold ml-1 flex-shrink-0">${currentVal === 'ALL' ? '✓' : ''}</span>`;
     allBtn.className = currentVal === 'ALL'
-      ? 'w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-between bg-brand/15 text-brand border border-brand/30'
-      : 'w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between text-textSub hover:text-white hover:bg-white/5 border border-transparent';
+      ? `w-full text-left ${pxClass} rounded-lg text-xs font-bold transition-colors flex items-center justify-between bg-brand/15 text-brand border border-brand/30`
+      : `w-full text-left ${pxClass} rounded-lg text-xs font-medium transition-colors flex items-center justify-between text-textSub hover:text-white hover:bg-white/5 border border-transparent`;
     listEl.appendChild(allBtn);
 
     cities.forEach(cityName => {
@@ -617,10 +657,10 @@ function populateCitySelector(cities) {
       btn.type = 'button';
       btn.setAttribute('data-city-val', cityName);
       btn.onclick = (e) => { e.stopPropagation(); selectCity(cityName); };
-      btn.innerHTML = `<span>${escapeHtml(cityName)}</span><span class="city-check text-[11px] font-bold">${currentVal === cityName ? '✓' : ''}</span>`;
+      btn.innerHTML = `<span class="truncate">${escapeHtml(cityName)}</span><span class="city-check text-[11px] font-bold ml-1 flex-shrink-0">${currentVal === cityName ? '✓' : ''}</span>`;
       btn.className = currentVal === cityName
-        ? 'w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-between bg-brand/15 text-brand border border-brand/30'
-        : 'w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center justify-between text-textSub hover:text-white hover:bg-white/5 border border-transparent';
+        ? `w-full text-left ${pxClass} rounded-lg text-xs font-bold transition-colors flex items-center justify-between bg-brand/15 text-brand border border-brand/30`
+        : `w-full text-left ${pxClass} rounded-lg text-xs font-medium transition-colors flex items-center justify-between text-textSub hover:text-white hover:bg-white/5 border border-transparent`;
       listEl.appendChild(btn);
     });
   });
