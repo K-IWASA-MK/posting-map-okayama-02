@@ -16,7 +16,8 @@
     "deploy:gas": "node scripts/safe-deploy.mjs",
     "provision:district": "node scripts/provision-district.mjs",
     "check:provisioning": "node scripts/check-provisioning-gate.mjs",
-    "audit:gate": "node scripts/check-scope.mjs"
+    "audit:gate": "node scripts/check-scope.mjs",
+    "audit:ai": "node scripts/validate-auditor-gate.mjs"
   },
   "keywords": [],
   "author": "",
