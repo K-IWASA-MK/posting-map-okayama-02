@@ -330,7 +330,6 @@ async function loadData(skipSync = false) {
     if (data && data.success) {
       logDebug("[loadData] System Summary received: total=" + data.total + ", done=" + data.done + ", percent=" + data.percent);
       updateStats(data);
-      prefetchRanking();
     } else {
       throw new Error(data ? data.message : "データが空です");
     }
