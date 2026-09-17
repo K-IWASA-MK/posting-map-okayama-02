@@ -53,5 +53,6 @@
   "docs/operations/COPY_RUNBOOK.md",
   "active/api/v2_api.js",
   "scripts/check-scope.mjs",
-  "tests/dashboard_verification_gate.mjs"
+  "tests/dashboard_verification_gate.mjs",
+  "scripts/validate-auditor-gate.mjs"
 ]
