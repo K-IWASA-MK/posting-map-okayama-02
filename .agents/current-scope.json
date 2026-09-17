@@ -50,5 +50,8 @@
   "scripts/check-pre-copy-purity.mjs",
   "scripts/test-copy-simulation.mjs",
   "package.json",
-  "docs/operations/COPY_RUNBOOK.md"
+  "docs/operations/COPY_RUNBOOK.md",
+  "active/api/v2_api.js",
+  "scripts/check-scope.mjs",
+  "tests/dashboard_verification_gate.mjs"
 ]
